@@ -1,237 +1,26 @@
 """
-Coleta de dados evolutivos para hélices alpha em um único passo DSSP.
+Funcoes de analise evolutiva para helices alpha.
 
-Todas as funções de coleta percorrem o diretório de estruturas uma única vez,
-acumulando os dados necessários para todos os gráficos evolutivos.
+Todas as funcoes compute_* recebem dados ja coletados pelo passo DSSP
+unificado (unified_dssp.py) e produzem DataFrames para os graficos.
 """
 
 import math
-import warnings
 from collections import Counter
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-warnings.filterwarnings("ignore", category=UserWarning, message="parse error")
-
-from .config import HYDROPHOBIC_AA, PROCESS_WORKERS, STANDARD_AMINO_ACIDS, glob_pdb
-
-
-# Mapeamento 3→1 letra (fallback manual para garantir robustez)
-_THREE_TO_ONE: dict[str, str] = {
-    "ALA": "A", "ARG": "R", "ASN": "N", "ASP": "D", "CYS": "C",
-    "GLN": "Q", "GLU": "E", "GLY": "G", "HIS": "H", "ILE": "I",
-    "LEU": "L", "LYS": "K", "MET": "M", "PHE": "F", "PRO": "P",
-    "SER": "S", "THR": "T", "TRP": "W", "TYR": "Y", "VAL": "V",
-}
-
-_EISENBERG_SCALE: dict[str, float] = {
-    "ALA":  0.62, "ARG": -2.53, "ASN": -0.78, "ASP": -0.90,
-    "CYS":  0.29, "GLN": -0.85, "GLU": -0.74, "GLY":  0.48,
-    "HIS": -0.40, "ILE":  1.38, "LEU":  1.06, "LYS": -1.50,
-    "MET":  0.64, "PHE":  1.19, "PRO":  0.12, "SER": -0.18,
-    "THR": -0.05, "TRP":  0.81, "TYR":  0.26, "VAL":  1.08,
-}
-
-_HELIX_PROPENSITY_CF: dict[str, float] = {
-    "ALA": 1.42, "GLU": 1.51, "LEU": 1.21, "MET": 1.45,
-    "GLN": 1.11, "LYS": 1.16, "ARG": 0.98, "HIS": 1.00,
-    "VAL": 1.06, "ILE": 1.08, "TYR": 0.69, "PHE": 1.13,
-    "TRP": 1.08, "THR": 0.83, "SER": 0.77, "CYS": 0.70,
-    "ASP": 1.01, "ASN": 0.67, "GLY": 0.57, "PRO": 0.57,
-}
-
-_CODON_DEGENERACY: dict[str, int] = {
-    "ALA": 4, "ARG": 6, "ASN": 2, "ASP": 2, "CYS": 2,
-    "GLN": 2, "GLU": 2, "GLY": 4, "HIS": 2, "ILE": 3,
-    "LEU": 6, "LYS": 2, "MET": 1, "PHE": 2, "PRO": 4,
-    "SER": 6, "THR": 4, "TRP": 1, "TYR": 2, "VAL": 4,
-}
-
-_PROTEOME_FREQ: dict[str, float] = {
-    "ALA": 6.97, "ARG": 5.53, "ASN": 4.06, "ASP": 5.25, "CYS": 2.27,
-    "GLN": 3.93, "GLU": 6.75, "GLY": 6.87, "HIS": 2.29, "ILE": 5.49,
-    "LEU": 9.68, "LYS": 5.19, "MET": 2.32, "PHE": 3.87, "PRO": 5.02,
-    "SER": 7.14, "THR": 5.57, "TRP": 1.33, "TYR": 3.21, "VAL": 6.47,
-}
-
-
-def _res3_to_1(res3: str) -> str | None:
-    """Converte código de 3 letras para 1 letra; retorna None se não encontrado."""
-    try:
-        from Bio.Data.IUPACData import protein_letters_3to1
-        result = protein_letters_3to1.get(res3.upper(), None)
-        if result:
-            return result
-    except Exception:
-        pass
-    return _THREE_TO_ONE.get(res3.upper(), None)
-
-
-def _process_single_pdb_evo(pdb_path: Path) -> dict | None:
-    """Processa um único PDB para coleta evolutiva. Retorna dict com dados ou None."""
-    from Bio.PDB import PDBParser, DSSP
-
-    helix_dssp_codes = {"H", "G", "I"}
-    try:
-        parser = PDBParser(QUIET=True)
-        structure = parser.get_structure(pdb_path.stem, str(pdb_path))
-        model = structure[0]
-        dssp = DSSP(model, str(pdb_path), dssp="mkdssp", file_type="PDB")
-    except Exception:
-        return None
-
-    dssp_records = list(dssp)
-    total_residues = len(dssp_records)
-    if total_residues == 0:
-        return None
-
-    helix_residue_count = sum(1 for r in dssp_records if r[2] in helix_dssp_codes)
-    helix_content = helix_residue_count / total_residues
-
-    heptad_local: dict[int, Counter] = {i: Counter() for i in range(7)}
-    for global_pos, record in enumerate(dssp_records):
-        try:
-            res_obj = record[1]
-            res3 = res_obj.resname.strip() if hasattr(res_obj, "resname") else None
-        except Exception:
-            res3 = None
-        aa1 = _res3_to_1(res3) if res3 else None
-        if aa1:
-            heptad_local[global_pos % 7][aa1] += 1
-
-    helix_sequences: list[list[str]] = []
-    ncap_position: dict[int, Counter] = {0: Counter(), 1: Counter(), 2: Counter()}
-    ccap_position: dict[int, Counter] = {-1: Counter(), -2: Counter(), -3: Counter()}
-    per_helix_data: list[dict] = []
-    transitions: Counter = Counter()
-    helix_lengths_by_type: dict[str, list] = {"H": [], "G": [], "I": []}
-
-    i = 0
-    n = len(dssp_records)
-    prev_type: str | None = None
-
-    while i < n:
-        ss = dssp_records[i][2]
-        if ss not in helix_dssp_codes:
-            prev_type = None
-            i += 1
-            continue
-
-        helix_type = ss
-        segment: list[str] = []
-
-        while i < n and dssp_records[i][2] == helix_type:
-            try:
-                res_obj = dssp_records[i][1]
-                res3 = res_obj.resname.strip() if hasattr(res_obj, "resname") else None
-            except Exception:
-                res3 = None
-            aa1 = _res3_to_1(res3) if res3 else None
-            if aa1:
-                segment.append(aa1)
-            i += 1
-
-        seg_len = len(segment)
-        if prev_type is not None and prev_type != helix_type:
-            transitions[(prev_type, helix_type)] += 1
-        prev_type = helix_type
-
-        if helix_type in helix_lengths_by_type:
-            helix_lengths_by_type[helix_type].append(seg_len)
-        if seg_len > 0:
-            per_helix_data.append({"length": seg_len, "aa_counts": Counter(segment)})
-
-        if helix_type == "H" and seg_len >= 4:
-            helix_sequences.append(segment)
-            for pos in range(min(3, seg_len)):
-                ncap_position[pos][segment[pos]] += 1
-            for offset, pos_key in enumerate([-1, -2, -3]):
-                idx = seg_len - 1 - offset
-                if idx >= 0:
-                    ccap_position[pos_key][segment[idx]] += 1
-
-    return {
-        "helix_content": helix_content,
-        "heptad_local": heptad_local,
-        "helix_sequences": helix_sequences,
-        "ncap_position": ncap_position,
-        "ccap_position": ccap_position,
-        "per_helix_data": per_helix_data,
-        "transitions": transitions,
-        "helix_lengths_by_type": helix_lengths_by_type,
-    }
-
-
-def collect_evolutionary_data(clean_dir: Path) -> dict:
-    """Coleta dados para gráficos evolutivos em um único passo DSSP (paralelo).
-
-    Args:
-        clean_dir: Diretório com arquivos .pdb limpos.
-
-    Returns:
-        Dict com chaves:
-        - helix_sequences, ncap_position, ccap_position, helix_content_per_structure,
-          per_helix_data, heptad_aa_distribution, transitions, helix_lengths_by_type
-    """
-    from tqdm.auto import tqdm
-
-    pdb_files = sorted(glob_pdb(clean_dir))
-    if not pdb_files:
-        raise FileNotFoundError(f"Nenhum .pdb encontrado em {clean_dir}")
-
-    helix_sequences: list[list[str]] = []
-    ncap_residues: Counter = Counter()
-    ccap_residues: Counter = Counter()
-    ncap_position: dict[int, Counter] = {0: Counter(), 1: Counter(), 2: Counter()}
-    ccap_position: dict[int, Counter] = {-1: Counter(), -2: Counter(), -3: Counter()}
-    helix_content_per_structure: list[float] = []
-    per_helix_data: list[dict] = []
-    heptad_aa_distribution: dict[int, Counter] = {i: Counter() for i in range(7)}
-    transitions: Counter = Counter()
-    helix_lengths_by_type: dict[str, list] = {"H": [], "G": [], "I": []}
-
-    print(f"  Processando {len(pdb_files):,} estruturas (workers: {PROCESS_WORKERS})...")
-
-    with ThreadPoolExecutor(max_workers=PROCESS_WORKERS) as executor:
-        futures = {executor.submit(_process_single_pdb_evo, f): f for f in pdb_files}
-        with tqdm(total=len(pdb_files), desc="Coletando dados evolutivos", unit="pdb") as pbar:
-            for future in as_completed(futures):
-                result = future.result()
-                if result is None:
-                    pbar.update(1)
-                    continue
-
-                helix_content_per_structure.append(result["helix_content"])
-                for pos, cnt in result["heptad_local"].items():
-                    heptad_aa_distribution[pos].update(cnt)
-                helix_sequences.extend(result["helix_sequences"])
-                for pos, cnt in result["ncap_position"].items():
-                    ncap_position[pos].update(cnt)
-                    ncap_residues.update(cnt)
-                for pos, cnt in result["ccap_position"].items():
-                    ccap_position[pos].update(cnt)
-                    ccap_residues.update(cnt)
-                per_helix_data.extend(result["per_helix_data"])
-                transitions.update(result["transitions"])
-                for ht, lens in result["helix_lengths_by_type"].items():
-                    helix_lengths_by_type[ht].extend(lens)
-                pbar.update(1)
-
-    return {
-        "helix_sequences": helix_sequences,
-        "ncap_residues": ncap_residues,
-        "ccap_residues": ccap_residues,
-        "ncap_position": ncap_position,
-        "ccap_position": ccap_position,
-        "helix_content_per_structure": helix_content_per_structure,
-        "per_helix_data": per_helix_data,
-        "heptad_aa_distribution": heptad_aa_distribution,
-        "transitions": transitions,
-        "helix_lengths_by_type": helix_lengths_by_type,
-    }
+from .config import (
+    CODON_DEGENERACY,
+    EISENBERG_SCALE,
+    HELIX_PROPENSITY,
+    HYDROPHOBIC_AA,
+    ONE_TO_THREE,
+    PROTEOME_FREQ,
+    STANDARD_AMINO_ACIDS,
+    THREE_TO_ONE,
+)
 
 
 def compute_hydrophobic_moments(helix_sequences: list) -> list[float]:
@@ -258,11 +47,10 @@ def compute_hydrophobic_moments(helix_sequences: list) -> list[float]:
         count = 0
 
         for i, aa1 in enumerate(seq):
-            # Converte 1-letra para 3-letras para consultar escala
-            aa3 = next((k for k, v in _THREE_TO_ONE.items() if v == aa1), None)
-            if aa3 is None or aa3 not in _EISENBERG_SCALE:
+            aa3 = ONE_TO_THREE.get(aa1)
+            if aa3 is None or aa3 not in EISENBERG_SCALE:
                 continue
-            h = _EISENBERG_SCALE[aa3]
+            h = EISENBERG_SCALE[aa3]
             theta = i * angle_per_residue
             sin_sum += h * math.sin(theta)
             cos_sum += h * math.cos(theta)
@@ -287,14 +75,13 @@ def compute_aa_cooccurrence(helix_sequences: list) -> pd.DataFrame:
     Returns:
         DataFrame 20×20 com índice e colunas = AAs ordenados alfabeticamente.
     """
-    all_aa_1 = sorted(set(_THREE_TO_ONE.values()))
+    all_aa_1 = sorted(THREE_TO_ONE.values())
     aa_to_idx = {aa: i for i, aa in enumerate(all_aa_1)}
     n = len(all_aa_1)
     matrix = np.zeros((n, n), dtype=float)
 
     total_pairs = 0
     for seq in helix_sequences:
-        # Conta AAs presentes na hélice
         present = [aa for aa in seq if aa in aa_to_idx]
         for i_idx in range(len(present)):
             for j_idx in range(i_idx + 1, len(present)):
@@ -329,11 +116,10 @@ def compute_helix_length_composition(per_helix_data: list) -> pd.DataFrame:
         "Especial":     {"GLY", "PRO"},
     }
 
-    # 1-letter sets
-    def _to_1(aa_set3: set) -> set:
-        return {_THREE_TO_ONE[aa] for aa in aa_set3 if aa in _THREE_TO_ONE}
-
-    groups_1 = {g: _to_1(aas) for g, aas in groups.items()}
+    groups_1 = {
+        g: {THREE_TO_ONE[aa] for aa in aas if aa in THREE_TO_ONE}
+        for g, aas in groups.items()
+    }
 
     bins = {
         "Curta (4-9)":    [],
@@ -444,8 +230,8 @@ def compute_codon_degeneracy_vs_propensity(
 
         rows.append({
             "AA": aa3,
-            "Codon_Degeneracy": _CODON_DEGENERACY.get(aa3, 0),
-            "Propensity_Theoretical": _HELIX_PROPENSITY_CF.get(aa3, 1.0),
+            "Codon_Degeneracy": CODON_DEGENERACY.get(aa3, 0),
+            "Propensity_Theoretical": HELIX_PROPENSITY.get(aa3, 1.0),
             "Propensity_Observed": obs_propensity,
             "Freq_Helix": freq_helix * 100,
             "Freq_Total": freq_total * 100,
@@ -468,7 +254,7 @@ def compute_proteome_comparison(global_counter: Counter) -> pd.DataFrame:
 
     for aa3 in sorted(STANDARD_AMINO_ACIDS):
         freq_obs = global_counter.get(aa3, 0) / total * 100
-        freq_prot = _PROTEOME_FREQ.get(aa3, 0.0)
+        freq_prot = PROTEOME_FREQ.get(aa3, 0.0)
         enrichment = freq_obs / freq_prot if freq_prot > 0 else 0.0
 
         rows.append({

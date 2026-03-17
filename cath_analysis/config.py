@@ -11,14 +11,13 @@ BASE_PATH = Path("/Volumes/promethion/cath")
 
 STRUCTURES_PATH = BASE_PATH / "structures"
 STRUCTURES_CLEAN_PATH = BASE_PATH / "structures_clean"
-STRUCTURES_CLEAN_S40_PATH = BASE_PATH / "structures_clean_s40"
 LOGS_PATH = BASE_PATH / "logs"
 ANALYSIS_PATH = BASE_PATH / "analysis"
 
 
 def glob_pdb(directory: Path) -> list[Path]:
     """Retorna PDBs válidos de um diretório, excluindo resource forks do macOS (._*)."""
-    return [p for p in directory.glob("*.pdb") if not p.name.startswith("._") and p.exists()]
+    return [p for p in directory.glob("*.pdb") if not p.name.startswith("._")]
 
 
 # ── URLs ──────────────────────────────────────────────────────────────────────
@@ -27,6 +26,10 @@ CATH_DOMAIN_LIST_URL = (
     "/cath-classification-data/cath-domain-list.txt"
 )
 PDB_DOWNLOAD_URL = "https://files.rcsb.org/download/{}.pdb"
+CATH_S40_URL = (
+    "http://download.cathdb.info/cath/releases/latest-release"
+    "/non-redundant-data-sets/cath-dataset-nonredundant-S40.list"
+)
 
 # ── Parâmetros de download ────────────────────────────────────────────────────
 MAINLY_ALPHA_CLASS = "1"   # Class 1 no CATH = Mainly Alpha
@@ -58,6 +61,41 @@ AA_PROPERTIES: dict[str, list[str]] = {
 
 # Subconjunto estritamente hidrofóbico (usado na análise de heptad)
 HYDROPHOBIC_AA = frozenset({"ALA", "VAL", "ILE", "LEU", "MET", "PHE", "TRP"})
+
+# ── Mapeamentos de aminoácidos ─────────────────────────────────────────────────
+THREE_TO_ONE: dict[str, str] = {
+    "ALA": "A", "ARG": "R", "ASN": "N", "ASP": "D", "CYS": "C",
+    "GLN": "Q", "GLU": "E", "GLY": "G", "HIS": "H", "ILE": "I",
+    "LEU": "L", "LYS": "K", "MET": "M", "PHE": "F", "PRO": "P",
+    "SER": "S", "THR": "T", "TRP": "W", "TYR": "Y", "VAL": "V",
+}
+
+ONE_TO_THREE: dict[str, str] = {v: k for k, v in THREE_TO_ONE.items()}
+
+# ── Escala de Eisenberg ────────────────────────────────────────────────────────
+EISENBERG_SCALE: dict[str, float] = {
+    "ALA":  0.62, "ARG": -2.53, "ASN": -0.78, "ASP": -0.90,
+    "CYS":  0.29, "GLN": -0.85, "GLU": -0.74, "GLY":  0.48,
+    "HIS": -0.40, "ILE":  1.38, "LEU":  1.06, "LYS": -1.50,
+    "MET":  0.64, "PHE":  1.19, "PRO":  0.12, "SER": -0.18,
+    "THR": -0.05, "TRP":  0.81, "TYR":  0.26, "VAL":  1.08,
+}
+
+# ── Degenerescência de códons ─────────────────────────────────────────────────
+CODON_DEGENERACY: dict[str, int] = {
+    "ALA": 4, "ARG": 6, "ASN": 2, "ASP": 2, "CYS": 2,
+    "GLN": 2, "GLU": 2, "GLY": 4, "HIS": 2, "ILE": 3,
+    "LEU": 6, "LYS": 2, "MET": 1, "PHE": 2, "PRO": 4,
+    "SER": 6, "THR": 4, "TRP": 1, "TYR": 2, "VAL": 4,
+}
+
+# ── Frequência no proteoma humano (%) ─────────────────────────────────────────
+PROTEOME_FREQ: dict[str, float] = {
+    "ALA": 6.97, "ARG": 5.53, "ASN": 4.06, "ASP": 5.25, "CYS": 2.27,
+    "GLN": 3.93, "GLU": 6.75, "GLY": 6.87, "HIS": 2.29, "ILE": 5.49,
+    "LEU": 9.68, "LYS": 5.19, "MET": 2.32, "PHE": 3.87, "PRO": 5.02,
+    "SER": 7.14, "THR": 5.57, "TRP": 1.33, "TYR": 3.21, "VAL": 6.47,
+}
 
 # ── Escala de Chou-Fasman ─────────────────────────────────────────────────────
 HELIX_PROPENSITY: dict[str, float] = {

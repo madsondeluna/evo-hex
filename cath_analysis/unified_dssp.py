@@ -21,60 +21,35 @@ import pandas as pd
 from tqdm.auto import tqdm
 
 from .config import (
+    CODON_DEGENERACY,
+    EISENBERG_SCALE,
     HELIX_PROPENSITY,
     HELIX_TYPES,
     HYDROPHOBIC_AA,
+    ONE_TO_THREE,
     PROCESS_WORKERS,
+    PROTEOME_FREQ,
     STANDARD_AMINO_ACIDS,
+    THREE_TO_ONE,
     glob_pdb,
 )
 
-# ── Constantes ────────────────────────────────────────────────────────────────
-
-_THREE_TO_ONE: dict[str, str] = {
-    "ALA": "A", "ARG": "R", "ASN": "N", "ASP": "D", "CYS": "C",
-    "GLN": "Q", "GLU": "E", "GLY": "G", "HIS": "H", "ILE": "I",
-    "LEU": "L", "LYS": "K", "MET": "M", "PHE": "F", "PRO": "P",
-    "SER": "S", "THR": "T", "TRP": "W", "TYR": "Y", "VAL": "V",
-}
-
-_ONE_TO_THREE: dict[str, str] = {v: k for k, v in _THREE_TO_ONE.items()}
-
-_EISENBERG_SCALE: dict[str, float] = {
-    "ALA":  0.62, "ARG": -2.53, "ASN": -0.78, "ASP": -0.90,
-    "CYS":  0.29, "GLN": -0.85, "GLU": -0.74, "GLY":  0.48,
-    "HIS": -0.40, "ILE":  1.38, "LEU":  1.06, "LYS": -1.50,
-    "MET":  0.64, "PHE":  1.19, "PRO":  0.12, "SER": -0.18,
-    "THR": -0.05, "TRP":  0.81, "TYR":  0.26, "VAL":  1.08,
-}
-
-_CODON_DEGENERACY: dict[str, int] = {
-    "ALA": 4, "ARG": 6, "ASN": 2, "ASP": 2, "CYS": 2,
-    "GLN": 2, "GLU": 2, "GLY": 4, "HIS": 2, "ILE": 3,
-    "LEU": 6, "LYS": 2, "MET": 1, "PHE": 2, "PRO": 4,
-    "SER": 6, "THR": 4, "TRP": 1, "TYR": 2, "VAL": 4,
-}
-
-_PROTEOME_FREQ: dict[str, float] = {
-    "ALA": 6.97, "ARG": 5.53, "ASN": 4.06, "ASP": 5.25, "CYS": 2.27,
-    "GLN": 3.93, "GLU": 6.75, "GLY": 6.87, "HIS": 2.29, "ILE": 5.49,
-    "LEU": 9.68, "LYS": 5.19, "MET": 2.32, "PHE": 3.87, "PRO": 5.02,
-    "SER": 7.14, "THR": 5.57, "TRP": 1.33, "TYR": 3.21, "VAL": 6.47,
-}
+# Importacao no nivel de modulo para evitar re-importar a cada chamada
+try:
+    from Bio.Data.IUPACData import protein_letters_3to1 as _BIOPYTHON_3TO1
+except ImportError:
+    _BIOPYTHON_3TO1 = None
 
 _HELIX_CODES = {"H", "G", "I"}
 
 
 def _res3_to_1(res3: str) -> str | None:
     """Converte codigo de 3 letras para 1 letra."""
-    try:
-        from Bio.Data.IUPACData import protein_letters_3to1
-        result = protein_letters_3to1.get(res3.upper(), None)
+    if _BIOPYTHON_3TO1 is not None:
+        result = _BIOPYTHON_3TO1.get(res3.upper())
         if result:
             return result
-    except Exception:
-        pass
-    return _THREE_TO_ONE.get(res3.upper(), None)
+    return THREE_TO_ONE.get(res3.upper())
 
 
 # ── Processamento por estrutura ───────────────────────────────────────────────
@@ -367,7 +342,7 @@ def _compute_propensity_df(agg: dict) -> pd.DataFrame:
 
     rows = []
     for aa3 in sorted(STANDARD_AMINO_ACIDS):
-        aa1 = _THREE_TO_ONE.get(aa3)
+        aa1 = THREE_TO_ONE.get(aa3)
         if aa1 is None:
             continue
         freq_total = agg["aa_total_3"].get(aa3, 0) / total_all * 100
@@ -399,7 +374,7 @@ def _compute_positions_df(agg: dict) -> pd.DataFrame:
     for pos_name, counter in position_map.items():
         total = sum(counter.values()) or 1
         for aa3 in sorted(STANDARD_AMINO_ACIDS):
-            aa1 = _THREE_TO_ONE.get(aa3)
+            aa1 = THREE_TO_ONE.get(aa3)
             if aa1 is None:
                 continue
             count = counter.get(aa1, 0)
@@ -433,7 +408,7 @@ def _compute_type_dfs(agg: dict) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFra
         total = sum(counter.values()) or 1
         h_name = helix_names[h_type]
         for aa3 in sorted(STANDARD_AMINO_ACIDS):
-            aa1 = _THREE_TO_ONE.get(aa3)
+            aa1 = THREE_TO_ONE.get(aa3)
             if aa1 is None:
                 continue
             count = counter.get(aa1, 0)
@@ -447,7 +422,6 @@ def _compute_type_dfs(agg: dict) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFra
 
     composition_df = pd.DataFrame(comp_rows)
 
-    # Adiciona rank dentro de cada tipo
     def _add_rank(df: pd.DataFrame) -> pd.DataFrame:
         df = df.copy()
         df["Rank"] = df.groupby("Helix_Type")["Frequency"].rank(
@@ -469,7 +443,7 @@ def _compute_type_dfs(agg: dict) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFra
     stat_rows = []
     if "H" in types_present and "G" in types_present:
         for aa3 in sorted(STANDARD_AMINO_ACIDS):
-            aa1 = _THREE_TO_ONE.get(aa3)
+            aa1 = THREE_TO_ONE.get(aa3)
             if aa1 is None:
                 continue
             h_data = composition_df[
@@ -531,14 +505,7 @@ def _compute_heptad_df(agg: dict) -> pd.DataFrame:
 
 
 def _compute_hydrophobic_moments(helix_sequences: list) -> list[float]:
-    """Calcula momento hidrofobico de Eisenberg para cada helice.
-
-    Args:
-        helix_sequences: Lista de listas de AAs em codigo 1-letra.
-
-    Returns:
-        Lista de valores muH para helices com >= 4 residuos.
-    """
+    """Calcula momento hidrofobico de Eisenberg para cada helice."""
     moments: list[float] = []
     angle_per_residue = math.radians(100.0)
 
@@ -549,10 +516,10 @@ def _compute_hydrophobic_moments(helix_sequences: list) -> list[float]:
         cos_sum = 0.0
         count = 0
         for i, aa1 in enumerate(seq):
-            aa3 = _ONE_TO_THREE.get(aa1)
-            if aa3 is None or aa3 not in _EISENBERG_SCALE:
+            aa3 = ONE_TO_THREE.get(aa1)
+            if aa3 is None or aa3 not in EISENBERG_SCALE:
                 continue
-            h = _EISENBERG_SCALE[aa3]
+            h = EISENBERG_SCALE[aa3]
             theta = i * angle_per_residue
             sin_sum += h * math.sin(theta)
             cos_sum += h * math.cos(theta)
@@ -565,10 +532,7 @@ def _compute_hydrophobic_moments(helix_sequences: list) -> list[float]:
 
 
 def _compute_length_vs_composition(per_helix_data: list) -> pd.DataFrame:
-    """Composicao por grupo fisico-quimico vs comprimento de helice.
-
-    Columns: Group, Bin, Frequency
-    """
+    """Composicao por grupo fisico-quimico vs comprimento de helice."""
     groups_1 = {
         "Hidrofobico": {"A", "V", "I", "L", "M", "F", "W", "P"},
         "Polar":       {"S", "T", "C", "Y", "N", "Q"},
@@ -617,13 +581,10 @@ def _compute_length_vs_composition(per_helix_data: list) -> pd.DataFrame:
 
 
 def _compute_codon_df(propensity_df: pd.DataFrame) -> pd.DataFrame:
-    """Degenerescencia de codons vs propensao para helice.
-
-    Columns: AA, Codon_Degeneracy, Propensity_Theoretical, Propensity_Observed
-    """
+    """Degenerescencia de codons vs propensao para helice."""
     rows = []
-    for aa3, deg in sorted(_CODON_DEGENERACY.items()):
-        aa1 = _THREE_TO_ONE.get(aa3)
+    for aa3, deg in sorted(CODON_DEGENERACY.items()):
+        aa1 = THREE_TO_ONE.get(aa3)
         if aa1 is None:
             continue
         row_mask = propensity_df["AA"] == aa1
@@ -643,13 +604,10 @@ def _compute_codon_df(propensity_df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _compute_proteome_df(propensity_df: pd.DataFrame) -> pd.DataFrame:
-    """Enriquecimento de AAs em relacao ao proteoma humano.
-
-    Columns: AA, Freq_Proteome, Freq_Observed, Enrichment
-    """
+    """Enriquecimento de AAs em relacao ao proteoma humano."""
     rows = []
-    for aa3, freq_prot in sorted(_PROTEOME_FREQ.items()):
-        aa1 = _THREE_TO_ONE.get(aa3)
+    for aa3, freq_prot in sorted(PROTEOME_FREQ.items()):
+        aa1 = THREE_TO_ONE.get(aa3)
         if aa1 is None:
             continue
         row_mask = propensity_df["AA"] == aa1

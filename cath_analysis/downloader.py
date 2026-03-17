@@ -4,9 +4,10 @@ Download de estruturas PDB mainly-alpha do banco CATH.
 Fluxo principal:
     1. setup_directories()          – garante hierarquia de pastas
     2. download_cath_domain_list()  – baixa o índice CATH
-    3. parse_cath_domains()         – extrai códigos PDB da classe 1
-    4. download_structures_parallel() – baixa PDBs em paralelo
-    5. save_download_results()      – persiste listas e relatório
+    3. download_s40_list()          – baixa lista nao-redundante S40 (opcional)
+    4. parse_cath_domains()         – extrai códigos PDB da classe 1
+    5. download_structures_parallel() – baixa PDBs em paralelo
+    6. save_download_results()      – persiste listas e relatório
 """
 
 import logging
@@ -19,6 +20,7 @@ from tqdm.auto import tqdm
 from .config import (
     BASE_PATH,
     CATH_DOMAIN_LIST_URL,
+    CATH_S40_URL,
     CHUNK_SIZE,
     DOWNLOAD_WORKERS,
     LOGS_PATH,
@@ -31,9 +33,15 @@ from .config import (
 
 logger = logging.getLogger(__name__)
 
+# Cache para check_existing_data() — evita varrer o disco duas vezes por execucao
+_check_cache: dict | None = None
+
 
 def check_existing_data() -> dict:
     """Inspeciona o que já existe no BASE_PATH e retorna um resumo.
+
+    O resultado é cacheado: chamadas subsequentes retornam o mesmo dict
+    sem re-escanear o disco.
 
     Returns:
         Dict com chaves:
@@ -44,6 +52,10 @@ def check_existing_data() -> dict:
           - clean_count     : int (nº de PDBs em structures_clean/)
           - clean_date      : str (data do PDB mais recente) ou ""
     """
+    global _check_cache
+    if _check_cache is not None:
+        return _check_cache
+
     from datetime import datetime
 
     def _fmt(path: Path) -> str:
@@ -53,13 +65,12 @@ def check_existing_data() -> dict:
     raw_dir = STRUCTURES_PATH
     clean_dir = BASE_PATH / "structures_clean"
 
-    # Usa mtime do diretório para evitar varrer todos os arquivos (lento em drives externos)
     raw_count = sum(1 for _ in raw_dir.glob("*.pdb") if not _.name.startswith("._")) if raw_dir.exists() else 0
     clean_count = sum(1 for _ in clean_dir.glob("*.pdb") if not _.name.startswith("._")) if clean_dir.exists() else 0
     raw_date = _fmt(raw_dir) if raw_dir.exists() and raw_count else ""
     clean_date = _fmt(clean_dir) if clean_dir.exists() and clean_count else ""
 
-    return {
+    _check_cache = {
         "has_cath_list": cath_file.exists(),
         "cath_list_date": _fmt(cath_file) if cath_file.exists() else "",
         "raw_count": raw_count,
@@ -67,6 +78,7 @@ def check_existing_data() -> dict:
         "clean_count": clean_count,
         "clean_date": clean_date,
     }
+    return _check_cache
 
 
 def setup_directories() -> tuple[Path, Path, Path]:
@@ -113,11 +125,44 @@ def download_cath_domain_list(base_path: Path) -> Path:
     return cath_file
 
 
-def parse_cath_domains(cath_file: Path) -> set[str]:
+def download_s40_list(base_path: Path) -> set[str]:
+    """Baixa a lista S40 e retorna set de PDB codes de 4 letras.
+
+    Trunca domain IDs (7+ chars) para os primeiros 4 caracteres.
+    Usa arquivo em cache se ja existir.
+
+    Args:
+        base_path: Diretório base onde o arquivo será salvo.
+
+    Returns:
+        Set de PDB codes em minúsculas (ex: {'1abc', '2xyz', ...}).
+    """
+    s40_file = base_path / "cath-s40-domains.txt"
+
+    if not s40_file.exists():
+        logger.info("Baixando lista S40...")
+        response = requests.get(CATH_S40_URL, timeout=60)
+        response.raise_for_status()
+        s40_file.write_text(response.text, encoding="utf-8")
+        logger.info("Lista S40 salva: %s", s40_file)
+
+    pdb_codes: set[str] = set()
+    for line in s40_file.read_text().splitlines():
+        line = line.strip()
+        if line and not line.startswith("#"):
+            domain_id = line.split()[0].lower()
+            pdb_codes.add(domain_id[:4])
+
+    logger.info("Lista S40: %d PDB codes únicos", len(pdb_codes))
+    return pdb_codes
+
+
+def parse_cath_domains(cath_file: Path, s40_codes: set[str] | None = None) -> set[str]:
     """Extrai códigos PDB de 4 letras para estruturas da classe mainly-alpha.
 
     Args:
         cath_file: Caminho para cath-domain-list.txt.
+        s40_codes: Se fornecido, filtra para o subconjunto S40 nao-redundante.
 
     Returns:
         Conjunto de códigos PDB em minúsculas.
@@ -134,6 +179,11 @@ def parse_cath_domains(cath_file: Path) -> set[str]:
             domain_id, cath_class = parts[0], parts[1]
             if cath_class == MAINLY_ALPHA_CLASS:
                 pdb_codes.add(domain_id[:4].lower())
+
+    if s40_codes is not None:
+        before = len(pdb_codes)
+        pdb_codes &= s40_codes
+        logger.info("Filtro S40: %d -> %d PDB codes", before, len(pdb_codes))
 
     logger.info("Total de estruturas mainly-alpha: %d", len(pdb_codes))
     return pdb_codes

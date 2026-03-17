@@ -123,6 +123,55 @@ def save_frequency_results(
     print(f"Frequências por estrutura: {csv_file}")
 
 
+def derive_frequencies_from_unified(analysis_path: Path) -> tuple[Counter, dict]:
+    """Deriva global_counter dos resultados do passo DSSP unificado.
+
+    Le o CSV de propensidades e o relatorio unificado para reconstruir um
+    Counter aproximado de aminoacidos sem precisar re-parsear todos os PDBs.
+
+    Args:
+        analysis_path: Diretorio com os arquivos de analise (helix_propensities.csv,
+                       unified_report.txt).
+
+    Returns:
+        Tupla (global_counter, per_structure).
+        per_structure e sempre vazio — use amino_acid_frequencies_per_structure.csv
+        se precisar de dados por estrutura.
+    """
+    import re
+    import pandas as pd
+
+    propensity_csv = analysis_path / "helix_propensities.csv"
+    if not propensity_csv.exists():
+        return Counter(), {}
+
+    # Tenta ler total de residuos do relatorio unificado
+    total_residues: int | None = None
+    report_txt = analysis_path / "unified_report.txt"
+    if report_txt.exists():
+        for line in report_txt.read_text().splitlines():
+            m = re.match(r"Total de residuos:\s+([\d,]+)", line)
+            if m:
+                total_residues = int(m.group(1).replace(",", ""))
+                break
+
+    df = pd.read_csv(propensity_csv)
+    global_counter: Counter = Counter()
+
+    from .config import ONE_TO_THREE
+    for _, row in df.iterrows():
+        aa3 = ONE_TO_THREE.get(row["AA"])
+        if aa3:
+            if total_residues:
+                count = int(round(row["Freq_Total"] / 100.0 * total_residues))
+            else:
+                count = int(round(row["Freq_Total"] * 1000))
+            if count > 0:
+                global_counter[aa3] = count
+
+    return global_counter, {}
+
+
 def print_frequency_summary(global_counter: Counter, per_structure: dict) -> None:
     """Exibe resumo das análises de frequência no console.
 

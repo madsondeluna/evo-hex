@@ -62,19 +62,20 @@ def clean_single_structure(input_file: Path, output_file: Path) -> dict:
         if not has_chain_a:
             return {"pdb_code": pdb_code, "status": "no_chain_a", "residues": 0}
 
+        # Conta residuos que serao escritos (modelo 0, cadeia A, AA padrao)
+        residue_count = sum(
+            1
+            for m in structure
+            if m.id == 0
+            for c in m
+            if c.id == "A"
+            for r in c
+            if r.id[0] == " " and r.resname.strip() in STANDARD_AMINO_ACIDS
+        )
+
         io = PDBIO()
         io.set_structure(structure)
         io.save(str(output_file), ChainAOnlySelect())
-
-        # Conta resíduos padrão após limpeza
-        clean_structure = parser.get_structure(pdb_code, str(output_file))
-        residue_count = sum(
-            1
-            for m in clean_structure
-            for c in m
-            for r in c
-            if r.id[0] == " "
-        )
 
         if residue_count == 0:
             output_file.unlink(missing_ok=True)

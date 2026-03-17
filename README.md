@@ -140,8 +140,9 @@ Os demais caminhos são derivados automaticamente:
 
 ### Recomendado: usar tmux
 
-As etapas DSSP (4, 5 e 6) levam 3-4h cada. Use **tmux** para deixar o pipeline
-rodando em background sem risco de o processo morrer se o terminal for fechado.
+A etapa 4 (DSSP unificado) leva 30-60 min no modo S40 ou 3-4h no dataset completo.
+Use **tmux** para deixar o pipeline rodando em background sem risco de o processo
+morrer se o terminal for fechado.
 
 ```bash
 # 1. Criar uma sessao tmux
@@ -202,6 +203,7 @@ o pipeline de onde parou sem re-executar etapas demoradas.
 | `python main.py --force-download` | Re-baixa e relimpa sem perguntar |
 | `python main.py --skip-download` | Pula etapas 1-2 sem perguntar |
 | `python main.py --no-interactive` | Sem menus, executa tudo automaticamente |
+| `python main.py --full-dataset` | Baixa dataset completo (~50k) sem filtro S40 |
 | `python main.py --plots g3 g4` | Pré-seleciona grupos de gráficos no menu |
 | `python main.py --plots helical_wheel_average pca_aa_composition` | Pré-seleciona gráficos individuais |
 | `python main.py --list-plots` | Lista todos os 21 gráficos disponíveis e sai |
@@ -262,13 +264,18 @@ Após as etapas de análise, o menu aparece automaticamente:
 Baixa o índice de domínios do CATH e faz download paralelo das estruturas PDB
 da classe Mainly-Alpha (classe 1) diretamente do RCSB.
 
-- Fonte do índice: `http://download.cathdb.info/...`
+Por padrão aplica o **filtro S40** (subconjunto não-redundante), baixando apenas
+~2-5 mil estruturas representativas em vez das ~50 mil totais. Para o dataset
+completo use `--full-dataset`.
+
+- Fonte do índice CATH: `http://download.cathdb.info/...`
+- Fonte da lista S40: `http://download.cathdb.info/...`
 - Fonte dos PDBs: `https://files.rcsb.org/download/{}.pdb`
 - Download paralelo com até 20 workers simultâneos
 - Retoma automaticamente (pula arquivos já baixados)
 - Gera: `logs/download_report.txt`, `mainly_alpha_pdb_codes.txt`
 
-**Saída esperada:** milhares de arquivos `.pdb` em `structures/`
+**Saída esperada:** ~2-5 mil arquivos `.pdb` em `structures/` (modo S40 padrão)
 
 ### Etapa 2: Limpeza de estruturas
 
@@ -290,24 +297,35 @@ Conta a ocorrência de cada aminoácido em todas as estruturas limpas.
 - Contagem global e por estrutura
 - Gera: `amino_acid_frequencies_global.txt`, `amino_acid_frequencies_per_structure.csv`
 
-### Etapa 4: Análise avançada de hélices (DSSP)
+### Etapa 4: Passo DSSP unificado
 
-> **Tempo estimado:** 3-4h para ~50k estruturas (7 workers paralelos, ~2s por arquivo).
-> Recomenda-se executar overnight ou em sessao `tmux`/`screen`.
+> **Tempo estimado:** 30-60 min para ~2-5k estruturas S40 (7 workers paralelos).
+> Para o dataset completo (~50k), espere 3-4h. Recomenda-se `tmux`/`screen`.
 
-Usa o DSSP para determinar a estrutura secundária de cada resíduo e analisa
-a composição das hélices em profundidade:
+Passo DSSP único e abrangente que **coleta todos os dados de uma vez** para as
+análises das etapas 4, 5 e 6. Não há mais três passes separados sobre as
+estruturas — tudo é coletado em uma única varredura paralela.
+
+O que é coletado nessa etapa:
 
 - Propensão de cada AA para hélices (observada vs. Chou-Fasman)
 - Preferência por posição: N-terminal, meio, C-terminal
-- Distribuição de comprimentos de hélices
+- Classificação de hélices por tipo (H / G / I) e composição por tipo
+- Distribuição de comprimentos por tipo de hélice
 - Padrão heptad de hidrofobicidade
+- Sequências individuais de cada hélice (para momento hidrofóbico e helical wheel)
+- Preferências de N-cap e C-cap (primeiras/últimas 3 posições)
+- Distribuição completa de AAs por posição no heptad
+- Pares de transição entre tipos de hélice
+- Fração helicoidal por estrutura
+
+Resultados salvos em `analysis/unified_report.txt` e nos CSVs de análise.
 
 ### Etapa 5: Tipos de hélices (H/G/I)
 
-> **Tempo estimado:** 3-4h (mesma ordem da etapa 4).
+> **Tempo estimado:** instantâneo (dados coletados na etapa 4).
 
-Classifica cada hélice pelo tipo DSSP e compara composição:
+Apresenta os dados de classificação de hélices já coletados na etapa 4:
 
 | Tipo DSSP | Nome | Ligação de H | Resíduos/volta |
 |---|---|---|---|
@@ -315,17 +333,12 @@ Classifica cada hélice pelo tipo DSSP e compara composição:
 | G | 3-10 helix | i → i+3 | 3,0 |
 | I | Pi helix | i → i+5 | 4,4 |
 
-### Etapa 6: Coleta de dados evolutivos
+### Etapa 6: Dados evolutivos
 
-> **Tempo estimado:** 3-4h (mesma ordem das etapas 4 e 5).
+> **Tempo estimado:** instantâneo (dados coletados na etapa 4).
 
-Passo DSSP único e abrangente que coleta dados para todas as análises evolutivas:
-
-- Sequências individuais de cada hélice (para moment hidrofóbico e helical wheel)
-- Preferências de N-cap e C-cap (primeiras/últimas 3 posições)
-- Distribuição completa de AAs por posição no heptad
-- Pares de transição entre tipos de hélice
-- Fração helicoidal por estrutura
+Carrega os dados evolutivos do pickle gerado pela etapa 4 e disponibiliza-os
+para os gráficos dos grupos 3, 4, 5 e 6.
 
 ---
 
@@ -634,7 +647,8 @@ desvios desses valores indicam particularidades da classe Mainly-Alpha.
 ```
 BASE_PATH/
 ├── cath-domain-list.txt              # Índice CATH baixado
-├── mainly_alpha_pdb_codes.txt        # Códigos PDB da classe 1
+├── cath-s40-domains.txt              # Lista S40 não-redundante
+├── mainly_alpha_pdb_codes.txt        # Códigos PDB da classe 1 (filtrados S40)
 │
 ├── structures/                       # Etapa 1: PDBs brutos
 │   ├── 1abc.pdb
@@ -655,15 +669,17 @@ BASE_PATH/
     ├── amino_acid_frequencies_global.txt
     ├── amino_acid_frequencies_per_structure.csv
     │
-    ├── helix_analysis_comprehensive_report.txt
+    ├── unified_report.txt            # Relatório do passo DSSP unificado
     ├── helix_propensities.csv
     ├── helix_positions.csv
-    ├── aa_properties_distribution.csv
-    │
-    ├── helix_types_comprehensive_report.txt
+    ├── helix_lengths.csv
+    ├── helix_lengths_by_type.csv
     ├── helix_type_composition.csv
     ├── helix_type_top_residues.csv
     ├── helix_type_statistical_comparison.csv
+    ├── codon_degeneracy.csv
+    ├── proteome_comparison.csv
+    ├── evo_data.pkl                  # Dados evolutivos (momento, heptad, caps...)
     │
     └── *.png                         # 21 gráficos gerados
 ```
@@ -680,12 +696,11 @@ cath/
 └── cath_analysis/
     ├── __init__.py
     ├── config.py                     # Constantes e caminhos
-    ├── downloader.py                 # Etapa 1: download CATH + PDB
+    ├── downloader.py                 # Etapa 1: download CATH + PDB (com filtro S40)
     ├── cleaner.py                    # Etapa 2: limpeza PDB
     ├── frequency_analysis.py         # Etapa 3: frequência de AAs
-    ├── helix_analysis.py             # Etapa 4: propensão, posições, heptad
-    ├── helix_types.py                # Etapa 5: classificação H/G/I
-    ├── evolutionary_analysis.py      # Etapa 6: dados evolutivos (DSSP único)
+    ├── unified_dssp.py               # Etapa 4: passo DSSP único (coleta tudo)
+    ├── evolutionary_analysis.py      # Funções de cálculo evolutivo (momento, entropia...)
     ├── plotting.py                   # Todas as 21 funções de visualização
     └── menu.py                       # Menu interativo de seleção de gráficos
 ```
@@ -697,9 +712,8 @@ config.py ←── todos os módulos
 downloader.py ──→ Etapa 1
 cleaner.py ──────→ Etapa 2
 frequency_analysis.py ──→ Etapa 3 → PCA (plotting)
-helix_analysis.py ──────→ Etapa 4 → plotting
-helix_types.py ─────────→ Etapa 5 → plotting
-evolutionary_analysis.py → Etapa 6 → plotting
+unified_dssp.py ─────────→ Etapa 4 → dados para etapas 5 e 6
+evolutionary_analysis.py → cálculos sobre evo_data → plotting
 menu.py ──────────────────────────────→ main.py
 ```
 
