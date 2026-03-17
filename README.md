@@ -153,20 +153,21 @@ Se você já baixou e limpou as estruturas, pule diretamente para a análise:
 python main.py --explore
 ```
 
-O pipeline detecta automaticamente dados existentes. Ao rodar com as etapas 1 ou 2,
-você verá:
+O pipeline detecta automaticamente dados existentes em todas as etapas. Ao re-executar,
+você será perguntado se deseja repetir cada etapa já concluída:
 
 ```
-  ┌─ Dados existentes ───────────────────────────────────┐
-  │  Índice CATH:       atualizado em 2025-11-08 13:30
-  │  Estruturas raw:    8.421 PDBs  (último: 2025-11-08 14:12)
-  │  Estruturas clean:  7.890 PDBs  (último: 2025-11-08 15:44)
-  └──────────────────────────────────────────────────────┘
+  Resultados existentes encontrados (gerados em 2025-11-08 15:44).
 
-  Baixar novamente? [s/N]
+  Re-executar análise de hélices (DSSP)? [s/N]
 ```
 
-Responda `N` (ou Enter) para pular e usar os dados existentes.
+Responda `N` (ou Enter) para pular e usar os dados existentes. Isso permite retomar
+o pipeline de onde parou sem re-executar etapas demoradas.
+
+> **Importante:** a deteccao e por etapa completa. Se o pipeline for interrompido no
+> meio de uma etapa (ex: Ctrl+C durante o DSSP), sera necessario re-executar essa
+> etapa do zero - nao ha checkpoint parcial por arquivo.
 
 ### Referência completa de flags
 
@@ -268,6 +269,9 @@ Conta a ocorrência de cada aminoácido em todas as estruturas limpas.
 
 ### Etapa 4: Análise avançada de hélices (DSSP)
 
+> **Tempo estimado:** 3-4h para ~50k estruturas (7 workers paralelos, ~2s por arquivo).
+> Recomenda-se executar overnight ou em sessao `tmux`/`screen`.
+
 Usa o DSSP para determinar a estrutura secundária de cada resíduo e analisa
 a composição das hélices em profundidade:
 
@@ -278,6 +282,8 @@ a composição das hélices em profundidade:
 
 ### Etapa 5: Tipos de hélices (H/G/I)
 
+> **Tempo estimado:** 3-4h (mesma ordem da etapa 4).
+
 Classifica cada hélice pelo tipo DSSP e compara composição:
 
 | Tipo DSSP | Nome | Ligação de H | Resíduos/volta |
@@ -287,6 +293,8 @@ Classifica cada hélice pelo tipo DSSP e compara composição:
 | I | Pi helix | i → i+5 | 4,4 |
 
 ### Etapa 6: Coleta de dados evolutivos
+
+> **Tempo estimado:** 3-4h (mesma ordem das etapas 4 e 5).
 
 Passo DSSP único e abrangente que coleta dados para todas as análises evolutivas:
 
@@ -706,6 +714,14 @@ esses casos como `error` e continua. Os códigos que falharam ficam em
 DSSP requer que os átomos backbone (N, Cα, C, O) estejam presentes e com distâncias
 razoáveis. Estruturas com resolução muito baixa, modelos incompletos ou erros de
 modelagem podem falhar. O pipeline registra e pula essas estruturas.
+
+---
+
+**Q: O mkdssp mostra "parse error at line 1: This file does not seem to be an mmCIF file". E um problema?**
+
+Nao. O mkdssp 4.x aceita arquivos PDB mas emite esse aviso no stderr porque espera mmCIF
+por padrao. O BioPython 1.84+ ja trata isso automaticamente passando `--output-format=dssp`
+ao detectar mkdssp >= 4.0. O pipeline suprime o aviso e processa normalmente.
 
 ---
 
