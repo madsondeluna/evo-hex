@@ -145,20 +145,25 @@ Use **tmux** para deixar o pipeline rodando em background sem risco de o process
 morrer se o terminal for fechado.
 
 ```bash
-# 1. Criar uma sessao tmux
+# 1. Criar uma sessao tmux (apenas na primeira vez)
 tmux new -s evo-hex
 
-# 2. Dentro da sessao, ativar o ambiente virtual e rodar
+# 2. Dentro da sessao, ativar o ambiente virtual
+source /Volumes/promethion/cath/.venv/bin/activate
+
+# 3. Entrar na pasta e rodar
 cd /Volumes/promethion/cath
-source .venv/bin/activate
 python main.py
 
-# 3. Para sair sem matar o processo: Ctrl+B, depois D
+# 4. Para sair sem matar o processo: Ctrl+B, depois D
 #    O pipeline continua rodando em background.
 
-# 4. Para reconectar e ver o progresso
+# 5. Para reconectar e ver o progresso (use sempre este comando ao voltar)
 tmux attach -t evo-hex
 ```
+
+> Se ao tentar criar a sessao aparecer `duplicate session: evo-hex`, significa que ela
+> ja existe. Use diretamente `tmux attach -t evo-hex` para entrar nela.
 
 > Instalar tmux: `brew install tmux` (macOS) ou `sudo apt install tmux` (Linux).
 
