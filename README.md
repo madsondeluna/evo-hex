@@ -138,6 +138,29 @@ Os demais caminhos são derivados automaticamente:
 
 ## 4. Como executar
 
+### Recomendado: usar tmux
+
+As etapas DSSP (4, 5 e 6) levam 3-4h cada. Use **tmux** para deixar o pipeline
+rodando em background sem risco de o processo morrer se o terminal for fechado.
+
+```bash
+# 1. Criar uma sessao tmux
+tmux new -s evo-hex
+
+# 2. Dentro da sessao, ativar o ambiente virtual e rodar
+cd /Volumes/promethion/cath
+source .venv/bin/activate
+python main.py
+
+# 3. Para sair sem matar o processo: Ctrl+B, depois D
+#    O pipeline continua rodando em background.
+
+# 4. Para reconectar e ver o progresso
+tmux attach -t evo-hex
+```
+
+> Instalar tmux: `brew install tmux` (macOS) ou `sudo apt install tmux` (Linux).
+
 ### Fluxo básico
 
 ```bash
