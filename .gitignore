@@ -80,6 +80,7 @@ Temporary Items
 .claude/
 
 # Analysis outputs
+analysis/
 *.csv
 *.png
 *.pdf
