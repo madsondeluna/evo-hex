@@ -12,7 +12,7 @@ from pathlib import Path
 from Bio import PDB
 from tqdm.auto import tqdm
 
-from .config import STANDARD_AMINO_ACIDS
+from .config import STANDARD_AMINO_ACIDS, glob_pdb
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ def analyze_amino_acid_frequency(
     Raises:
         FileNotFoundError: Se clean_dir não existir ou não tiver PDBs.
     """
-    pdb_files = list(clean_dir.glob("*.pdb"))
+    pdb_files = glob_pdb(clean_dir)
     if not pdb_files:
         raise FileNotFoundError(f"Nenhuma estrutura limpa encontrada em {clean_dir}")
 

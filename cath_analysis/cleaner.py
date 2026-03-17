@@ -14,7 +14,7 @@ from Bio import PDB
 from Bio.PDB import PDBIO, Select
 from tqdm.auto import tqdm
 
-from .config import PROCESS_WORKERS, STANDARD_AMINO_ACIDS
+from .config import PROCESS_WORKERS, STANDARD_AMINO_ACIDS, glob_pdb
 
 logger = logging.getLogger(__name__)
 
@@ -102,13 +102,13 @@ def clean_all_structures(
     Returns:
         Dict de resultados, ou None se não houver arquivos.
     """
-    pdb_files = list(raw_dir.glob("*.pdb"))
+    pdb_files = glob_pdb(raw_dir)
     if not pdb_files:
         logger.error("Nenhum arquivo .pdb encontrado em %s", raw_dir)
         return None
 
     total = len(pdb_files)
-    existing_clean = len(list(clean_dir.glob("*.pdb")))
+    existing_clean = len(glob_pdb(clean_dir))
 
     print(f"\n{'='*60}")
     print("LIMPEZA DE ESTRUTURAS PDB")

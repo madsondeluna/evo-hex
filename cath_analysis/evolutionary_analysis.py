@@ -12,7 +12,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from .config import HYDROPHOBIC_AA, STANDARD_AMINO_ACIDS
+from .config import HYDROPHOBIC_AA, STANDARD_AMINO_ACIDS, glob_pdb
 
 
 # Mapeamento 3→1 letra (fallback manual para garantir robustez)
@@ -90,7 +90,7 @@ def collect_evolutionary_data(clean_dir: Path) -> dict:
     """
     from Bio.PDB import PDBParser, DSSP
 
-    pdb_files = sorted(clean_dir.glob("*.pdb"))
+    pdb_files = sorted(glob_pdb(clean_dir))
     if not pdb_files:
         raise FileNotFoundError(f"Nenhum .pdb encontrado em {clean_dir}")
 

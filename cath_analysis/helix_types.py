@@ -26,6 +26,7 @@ from .config import (
     HELIX_TYPES,
     STANDARD_AMINO_ACIDS,
     STRUCTURES_CLEAN_PATH,
+    glob_pdb,
 )
 
 logger = logging.getLogger(__name__)
@@ -55,7 +56,7 @@ def classify_helix_types(clean_dir: Path) -> dict:
             "mkdssp não encontrado. Instale com: brew install brewsci/bio/dssp"
         )
 
-    pdb_files = list(clean_dir.glob("*.pdb"))
+    pdb_files = glob_pdb(clean_dir)
     parser = PDB.PDBParser(QUIET=True)
 
     helix_counts: Counter = Counter()

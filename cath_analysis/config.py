@@ -14,6 +14,12 @@ STRUCTURES_CLEAN_PATH = BASE_PATH / "structures_clean"
 LOGS_PATH = BASE_PATH / "logs"
 ANALYSIS_PATH = BASE_PATH / "analysis"
 
+
+def glob_pdb(directory: Path) -> list[Path]:
+    """Retorna PDBs válidos de um diretório, excluindo resource forks do macOS (._*)."""
+    return [p for p in directory.glob("*.pdb") if not p.name.startswith("._") and p.exists()]
+
+
 # ── URLs ──────────────────────────────────────────────────────────────────────
 CATH_DOMAIN_LIST_URL = (
     "http://download.cathdb.info/cath/releases/latest-release"

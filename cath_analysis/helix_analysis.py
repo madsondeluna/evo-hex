@@ -28,6 +28,7 @@ from .config import (
     HELIX_PROPENSITY,
     HYDROPHOBIC_AA,
     STANDARD_AMINO_ACIDS,
+    glob_pdb,
 )
 
 logger = logging.getLogger(__name__)
@@ -156,7 +157,7 @@ def analyze_secondary_structure_with_dssp(
     if not _check_dssp():
         return None
 
-    pdb_files = list(clean_dir.glob("*.pdb"))
+    pdb_files = glob_pdb(clean_dir)
     global_helix: Counter = Counter()
     global_all: Counter = Counter()
     global_positions: dict = defaultdict(lambda: defaultdict(int))
@@ -274,7 +275,7 @@ def analyze_hydrophobic_patterns(clean_dir: Path) -> dict:
     parser = PDB.PDBParser(QUIET=True)
     heptad: dict = {i: {"hydrophobic": 0, "total": 0} for i in range(7)}
 
-    pdb_files = list(clean_dir.glob("*.pdb"))
+    pdb_files = glob_pdb(clean_dir)
     with tqdm(total=len(pdb_files), desc="Hydrophobic patterns") as pbar:
         for pdb_file in pdb_files:
             try:
