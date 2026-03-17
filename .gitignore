@@ -79,8 +79,9 @@ Temporary Items
 # Claude
 .claude/
 
-# Debug session
-debug/
+# Debug session (dados ignorados, notebook versionado)
+debug/structures_clean/
+debug/analysis/
 
 # Analysis outputs
 analysis/
