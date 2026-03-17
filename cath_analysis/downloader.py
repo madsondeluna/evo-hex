@@ -50,18 +50,21 @@ def check_existing_data() -> dict:
         return datetime.fromtimestamp(path.stat().st_mtime).strftime("%Y-%m-%d %H:%M")
 
     cath_file = BASE_PATH / "cath-domain-list.txt"
-    raw_pdbs = glob_pdb(STRUCTURES_PATH) if STRUCTURES_PATH.exists() else []
-    clean_pdbs = glob_pdb(BASE_PATH / "structures_clean") if (BASE_PATH / "structures_clean").exists() else []
+    raw_dir = STRUCTURES_PATH
+    clean_dir = BASE_PATH / "structures_clean"
 
-    raw_date = _fmt(max(raw_pdbs, key=lambda p: p.stat().st_mtime)) if raw_pdbs else ""
-    clean_date = _fmt(max(clean_pdbs, key=lambda p: p.stat().st_mtime)) if clean_pdbs else ""
+    # Usa mtime do diretório para evitar varrer todos os arquivos (lento em drives externos)
+    raw_count = sum(1 for _ in raw_dir.glob("*.pdb") if not _.name.startswith("._")) if raw_dir.exists() else 0
+    clean_count = sum(1 for _ in clean_dir.glob("*.pdb") if not _.name.startswith("._")) if clean_dir.exists() else 0
+    raw_date = _fmt(raw_dir) if raw_dir.exists() and raw_count else ""
+    clean_date = _fmt(clean_dir) if clean_dir.exists() and clean_count else ""
 
     return {
         "has_cath_list": cath_file.exists(),
         "cath_list_date": _fmt(cath_file) if cath_file.exists() else "",
-        "raw_count": len(raw_pdbs),
+        "raw_count": raw_count,
         "raw_date": raw_date,
-        "clean_count": len(clean_pdbs),
+        "clean_count": clean_count,
         "clean_date": clean_date,
     }
 
