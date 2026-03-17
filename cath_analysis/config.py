@@ -7,7 +7,7 @@ import multiprocessing
 from pathlib import Path
 
 # ── Caminhos ──────────────────────────────────────────────────────────────────
-BASE_PATH = Path("/Users/madsonluna/Documents/cath")
+BASE_PATH = Path("/Volumes/promethion/cath")
 
 STRUCTURES_PATH = BASE_PATH / "structures"
 STRUCTURES_CLEAN_PATH = BASE_PATH / "structures_clean"
