@@ -12,7 +12,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from .config import HYDROPHOBIC_AA, STANDARD_AMINO_ACIDS, glob_pdb
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+from .config import HYDROPHOBIC_AA, PROCESS_WORKERS, STANDARD_AMINO_ACIDS, glob_pdb
 
 
 # Mapeamento 3→1 letra (fallback manual para garantir robustez)
@@ -66,39 +68,117 @@ def _res3_to_1(res3: str) -> str | None:
     return _THREE_TO_ONE.get(res3.upper(), None)
 
 
-def collect_evolutionary_data(clean_dir: Path) -> dict:
-    """Coleta dados para gráficos evolutivos em um único passo DSSP.
+def _process_single_pdb_evo(pdb_path: Path) -> dict | None:
+    """Processa um único PDB para coleta evolutiva. Retorna dict com dados ou None."""
+    from Bio.PDB import PDBParser, DSSP
 
-    Percorre todos os arquivos .pdb em clean_dir, roda DSSP em cada um e
-    acumula os dados necessários para todos os gráficos evolutivos.
+    helix_dssp_codes = {"H", "G", "I"}
+    try:
+        parser = PDBParser(QUIET=True)
+        structure = parser.get_structure(pdb_path.stem, str(pdb_path))
+        model = structure[0]
+        dssp = DSSP(model, str(pdb_path), dssp="mkdssp", file_type="PDB")
+    except Exception:
+        return None
+
+    dssp_records = list(dssp)
+    total_residues = len(dssp_records)
+    if total_residues == 0:
+        return None
+
+    helix_residue_count = sum(1 for r in dssp_records if r[2] in helix_dssp_codes)
+    helix_content = helix_residue_count / total_residues
+
+    heptad_local: dict[int, Counter] = {i: Counter() for i in range(7)}
+    for global_pos, record in enumerate(dssp_records):
+        try:
+            res_obj = record[1]
+            res3 = res_obj.resname.strip() if hasattr(res_obj, "resname") else None
+        except Exception:
+            res3 = None
+        aa1 = _res3_to_1(res3) if res3 else None
+        if aa1:
+            heptad_local[global_pos % 7][aa1] += 1
+
+    helix_sequences: list[list[str]] = []
+    ncap_position: dict[int, Counter] = {0: Counter(), 1: Counter(), 2: Counter()}
+    ccap_position: dict[int, Counter] = {-1: Counter(), -2: Counter(), -3: Counter()}
+    per_helix_data: list[dict] = []
+    transitions: Counter = Counter()
+    helix_lengths_by_type: dict[str, list] = {"H": [], "G": [], "I": []}
+
+    i = 0
+    n = len(dssp_records)
+    prev_type: str | None = None
+
+    while i < n:
+        ss = dssp_records[i][2]
+        if ss not in helix_dssp_codes:
+            prev_type = None
+            i += 1
+            continue
+
+        helix_type = ss
+        segment: list[str] = []
+
+        while i < n and dssp_records[i][2] == helix_type:
+            try:
+                res_obj = dssp_records[i][1]
+                res3 = res_obj.resname.strip() if hasattr(res_obj, "resname") else None
+            except Exception:
+                res3 = None
+            aa1 = _res3_to_1(res3) if res3 else None
+            if aa1:
+                segment.append(aa1)
+            i += 1
+
+        seg_len = len(segment)
+        if prev_type is not None and prev_type != helix_type:
+            transitions[(prev_type, helix_type)] += 1
+        prev_type = helix_type
+
+        if helix_type in helix_lengths_by_type:
+            helix_lengths_by_type[helix_type].append(seg_len)
+        if seg_len > 0:
+            per_helix_data.append({"length": seg_len, "aa_counts": Counter(segment)})
+
+        if helix_type == "H" and seg_len >= 4:
+            helix_sequences.append(segment)
+            for pos in range(min(3, seg_len)):
+                ncap_position[pos][segment[pos]] += 1
+            for offset, pos_key in enumerate([-1, -2, -3]):
+                idx = seg_len - 1 - offset
+                if idx >= 0:
+                    ccap_position[pos_key][segment[idx]] += 1
+
+    return {
+        "helix_content": helix_content,
+        "heptad_local": heptad_local,
+        "helix_sequences": helix_sequences,
+        "ncap_position": ncap_position,
+        "ccap_position": ccap_position,
+        "per_helix_data": per_helix_data,
+        "transitions": transitions,
+        "helix_lengths_by_type": helix_lengths_by_type,
+    }
+
+
+def collect_evolutionary_data(clean_dir: Path) -> dict:
+    """Coleta dados para gráficos evolutivos em um único passo DSSP (paralelo).
 
     Args:
         clean_dir: Diretório com arquivos .pdb limpos.
 
     Returns:
         Dict com chaves:
-        - helix_sequences: list[list[str]] – sequências 1-letra por hélice (tipo H, ≥4 res)
-        - ncap_residues: Counter – AAs nas posições 0,1,2 de hélices H
-        - ccap_residues: Counter – AAs nas posições -1,-2,-3 de hélices H
-        - ncap_position: dict{0: Counter, 1: Counter, 2: Counter}
-        - ccap_position: dict{-1: Counter, -2: Counter, -3: Counter}
-        - helix_content_per_structure: list[float] – fração de resíduos em hélices por estrutura
-        - per_helix_data: list[dict{'length': int, 'aa_counts': Counter}]
-        - heptad_aa_distribution: dict{0..6: Counter}
-        - transitions: Counter de (from_type, to_type)
-        - helix_lengths_by_type: dict{'H': list, 'G': list, 'I': list}
+        - helix_sequences, ncap_position, ccap_position, helix_content_per_structure,
+          per_helix_data, heptad_aa_distribution, transitions, helix_lengths_by_type
     """
-    from Bio.PDB import PDBParser, DSSP
+    from tqdm.auto import tqdm
 
     pdb_files = sorted(glob_pdb(clean_dir))
     if not pdb_files:
         raise FileNotFoundError(f"Nenhum .pdb encontrado em {clean_dir}")
-
-    try:
-        from tqdm import tqdm
-        iterator = tqdm(pdb_files, desc="Coletando dados evolutivos", unit="pdb")
-    except ImportError:
-        iterator = pdb_files
 
     helix_sequences: list[list[str]] = []
     ncap_residues: Counter = Counter()
@@ -111,119 +191,32 @@ def collect_evolutionary_data(clean_dir: Path) -> dict:
     transitions: Counter = Counter()
     helix_lengths_by_type: dict[str, list] = {"H": [], "G": [], "I": []}
 
-    parser = PDBParser(QUIET=True)
-    helix_dssp_codes = {"H", "G", "I"}
+    print(f"  Processando {len(pdb_files):,} estruturas (workers: {PROCESS_WORKERS})...")
 
-    for pdb_path in iterator:
-        try:
-            structure = parser.get_structure(pdb_path.stem, str(pdb_path))
-            model = structure[0]
-            dssp = DSSP(model, str(pdb_path), dssp="mkdssp", file_type="PDB")
-        except Exception:
-            continue
+    with ThreadPoolExecutor(max_workers=PROCESS_WORKERS) as executor:
+        futures = {executor.submit(_process_single_pdb_evo, f): f for f in pdb_files}
+        with tqdm(total=len(pdb_files), desc="Coletando dados evolutivos", unit="pdb") as pbar:
+            for future in as_completed(futures):
+                result = future.result()
+                if result is None:
+                    pbar.update(1)
+                    continue
 
-        # Recolhe sequência de DSSP na ordem dos resíduos
-        dssp_records = list(dssp)
-        total_residues = len(dssp_records)
-        if total_residues == 0:
-            continue
-
-        helix_residue_count = sum(1 for r in dssp_records if r[2] in helix_dssp_codes)
-        helix_content_per_structure.append(helix_residue_count / total_residues)
-
-        # Coleta heptad para todos os resíduos
-        for global_pos, record in enumerate(dssp_records):
-            res3 = record[1].resname if hasattr(record[1], "resname") else None
-            # record layout: (dssp_index, res_id, ss, acc, phi, psi, ...)
-            # Para o heptad, usa 3-letra do resíduo
-            # record[1] é o resíduo Bio.PDB; mais seguro usar record diretamente
-            # Tentamos pegar 3-letra pelo resíduo
-            try:
-                res_obj = record[1]  # pode ser ResidueKey ou similar
-                # Em versões modernas do Biopython, dssp retorna:
-                # (dssp_idx, residue, ss, acc, phi, psi, ...)
-                # onde residue é um objeto Residue
-                if hasattr(res_obj, "resname"):
-                    res3 = res_obj.resname.strip()
-                else:
-                    res3 = None
-            except Exception:
-                res3 = None
-
-            aa1 = _res3_to_1(res3) if res3 else None
-            if aa1:
-                heptad_pos = global_pos % 7
-                heptad_aa_distribution[heptad_pos][aa1] += 1
-
-        # Segmenta em hélices contíguas
-        # Percorre a lista e extrai segmentos contíguos do mesmo tipo
-        i = 0
-        n = len(dssp_records)
-        prev_type: str | None = None
-
-        while i < n:
-            record = dssp_records[i]
-            ss = record[2]
-
-            if ss not in helix_dssp_codes:
-                if prev_type is not None:
-                    prev_type = None
-                i += 1
-                continue
-
-            # Início de um segmento de hélice
-            helix_type = ss
-            segment_start = i
-            segment = []
-
-            while i < n and dssp_records[i][2] == helix_type:
-                r = dssp_records[i]
-                try:
-                    res_obj = r[1]
-                    res3 = res_obj.resname.strip() if hasattr(res_obj, "resname") else None
-                except Exception:
-                    res3 = None
-                aa1 = _res3_to_1(res3) if res3 else None
-                if aa1:
-                    segment.append(aa1)
-                i += 1
-
-            seg_len = len(segment)
-
-            # Transição
-            if prev_type is not None and prev_type != helix_type:
-                transitions[(prev_type, helix_type)] += 1
-
-            prev_type = helix_type
-
-            # Comprimento por tipo
-            if helix_type in helix_lengths_by_type:
-                helix_lengths_by_type[helix_type].append(seg_len)
-
-            # Dados por hélice (todos os tipos)
-            if seg_len > 0:
-                per_helix_data.append({
-                    "length": seg_len,
-                    "aa_counts": Counter(segment),
-                })
-
-            # Apenas hélices H (alpha) com ≥4 resíduos para sequências/ncap/ccap
-            if helix_type == "H" and seg_len >= 4:
-                helix_sequences.append(segment)
-
-                # N-cap: posições 0, 1, 2
-                for pos in range(min(3, seg_len)):
-                    aa = segment[pos]
-                    ncap_residues[aa] += 1
-                    ncap_position[pos][aa] += 1
-
-                # C-cap: posições -1, -2, -3
-                for offset, pos_key in enumerate([-1, -2, -3]):
-                    idx = seg_len - 1 - offset
-                    if idx >= 0:
-                        aa = segment[idx]
-                        ccap_residues[aa] += 1
-                        ccap_position[pos_key][aa] += 1
+                helix_content_per_structure.append(result["helix_content"])
+                for pos, cnt in result["heptad_local"].items():
+                    heptad_aa_distribution[pos].update(cnt)
+                helix_sequences.extend(result["helix_sequences"])
+                for pos, cnt in result["ncap_position"].items():
+                    ncap_position[pos].update(cnt)
+                    ncap_residues.update(cnt)
+                for pos, cnt in result["ccap_position"].items():
+                    ccap_position[pos].update(cnt)
+                    ccap_residues.update(cnt)
+                per_helix_data.extend(result["per_helix_data"])
+                transitions.update(result["transitions"])
+                for ht, lens in result["helix_lengths_by_type"].items():
+                    helix_lengths_by_type[ht].extend(lens)
+                pbar.update(1)
 
     return {
         "helix_sequences": helix_sequences,

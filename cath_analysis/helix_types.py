@@ -12,6 +12,7 @@ e compara composição de aminoácidos entre eles.
 import logging
 import shutil
 from collections import Counter, defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 import numpy as np
@@ -24,6 +25,7 @@ from .config import (
     ANALYSIS_PATH,
     HELIX_CHARACTERISTICS,
     HELIX_TYPES,
+    PROCESS_WORKERS,
     STANDARD_AMINO_ACIDS,
     STRUCTURES_CLEAN_PATH,
     glob_pdb,
@@ -57,7 +59,6 @@ def classify_helix_types(clean_dir: Path) -> dict:
         )
 
     pdb_files = glob_pdb(clean_dir)
-    parser = PDB.PDBParser(QUIET=True)
 
     helix_counts: Counter = Counter()
     helix_residues: dict = defaultdict(Counter)
@@ -67,31 +68,24 @@ def classify_helix_types(clean_dir: Path) -> dict:
 
     successful = failed = 0
 
-    print(f"\nClassificando tipos de hélices em {len(pdb_files):,} estruturas...")
+    print(f"\nClassificando tipos de hélices em {len(pdb_files):,} estruturas (workers: {PROCESS_WORKERS})...")
 
-    with tqdm(total=len(pdb_files), desc="Classifying helix types") as pbar:
-        for pdb_file in pdb_files:
-            pdb_code = pdb_file.stem
-            try:
-                structure = parser.get_structure(pdb_code, str(pdb_file))
-                model = structure[0]
-                dssp = DSSP(model, str(pdb_file), dssp="mkdssp", file_type="PDB")
-
-                ss_seq = [dssp[k][2] for k in dssp.property_keys]
-                aa_seq = [dssp[k][1] for k in dssp.property_keys]
-
-                _process_helix_sequence(
-                    ss_seq, aa_seq,
-                    helix_counts, helix_residues, helix_lengths,
-                    helix_positions, transitions,
-                )
-                successful += 1
-
-            except Exception as exc:  # noqa: BLE001
-                logger.debug("Falha em %s: %s", pdb_code, exc)
-                failed += 1
-
-            pbar.update(1)
+    with ThreadPoolExecutor(max_workers=PROCESS_WORKERS) as executor:
+        futures = {executor.submit(_classify_single_pdb, f): f for f in pdb_files}
+        with tqdm(total=len(pdb_files), desc="Classifying helix types") as pbar:
+            for future in as_completed(futures):
+                result = future.result()
+                if result is not None:
+                    ss_seq, aa_seq = result
+                    _process_helix_sequence(
+                        ss_seq, aa_seq,
+                        helix_counts, helix_residues, helix_lengths,
+                        helix_positions, transitions,
+                    )
+                    successful += 1
+                else:
+                    failed += 1
+                pbar.update(1)
 
     print(f"Classificação concluída: {successful} sucessos, {failed} falhas")
 
@@ -106,6 +100,21 @@ def classify_helix_types(clean_dir: Path) -> dict:
         "transitions": dict(transitions),
         "structures_analyzed": successful,
     }
+
+
+def _classify_single_pdb(pdb_file: Path) -> tuple[list, list] | None:
+    """Roda DSSP em um único PDB e retorna (ss_seq, aa_seq) ou None em caso de erro."""
+    try:
+        parser = PDB.PDBParser(QUIET=True)
+        structure = parser.get_structure(pdb_file.stem, str(pdb_file))
+        model = structure[0]
+        dssp = DSSP(model, str(pdb_file), dssp="mkdssp", file_type="PDB")
+        ss_seq = [dssp[k][2] for k in dssp.property_keys]
+        aa_seq = [dssp[k][1] for k in dssp.property_keys]
+        return ss_seq, aa_seq
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("Falha em %s: %s", pdb_file.stem, exc)
+        return None
 
 
 def _process_helix_sequence(

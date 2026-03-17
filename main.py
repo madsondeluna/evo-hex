@@ -77,6 +77,17 @@ def _ask_redownload() -> bool:
         print("  Responda 's' para sim ou 'n' para não.")
 
 
+def _ask_rerun(label: str) -> bool:
+    """Pergunta ao usuário se deseja re-executar uma etapa. Retorna True se sim."""
+    while True:
+        resp = input(f"\n  Re-executar {label}? [s/N] ").strip().lower()
+        if resp in ("s", "sim", "y", "yes"):
+            return True
+        if resp in ("", "n", "não", "nao", "no"):
+            return False
+        print("  Responda 's' para sim ou 'n' para não.")
+
+
 def step1_download(force: bool = False, interactive: bool = True) -> None:
     """Etapa 1: Download de estruturas PDB mainly-alpha.
 
@@ -160,8 +171,10 @@ def step2_clean(force: bool = False, interactive: bool = True) -> None:
         print_cleaning_summary(clean_results, STRUCTURES_PATH, STRUCTURES_CLEAN_PATH)
 
 
-def step3_frequency(cache: dict) -> None:
+def step3_frequency(cache: dict, interactive: bool = True) -> None:
     """Etapa 3: Análise de frequência de aminoácidos."""
+    from collections import Counter
+    import pandas as pd
     from cath_analysis.frequency_analysis import (
         analyze_amino_acid_frequency,
         print_frequency_summary,
@@ -172,6 +185,34 @@ def step3_frequency(cache: dict) -> None:
     print("ETAPA 3 – FREQUÊNCIA DE AMINOÁCIDOS")
     print("=" * 60 + "\n")
 
+    freq_csv = ANALYSIS_PATH / "amino_acid_frequencies_per_structure.csv"
+    if freq_csv.exists():
+        mtime = freq_csv.stat().st_mtime
+        from datetime import datetime
+        date_str = datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M")
+        print(f"  Resultados existentes encontrados (gerados em {date_str}).")
+        if interactive:
+            if not _ask_rerun("análise de frequência"):
+                print("  Carregando resultados anteriores...")
+                global_txt = ANALYSIS_PATH / "amino_acid_frequencies_global.txt"
+                global_counter: Counter = Counter()
+                if global_txt.exists():
+                    for line in global_txt.read_text().splitlines():
+                        parts = line.strip().split()
+                        if len(parts) >= 2:
+                            try:
+                                global_counter[parts[0]] = int(parts[1])
+                            except ValueError:
+                                pass
+                cache["global_counter"] = global_counter
+                cache["per_structure"] = {}
+                return
+        else:
+            print("  [INFO] Use --force-download para re-executar.")
+            cache["global_counter"] = Counter()
+            cache["per_structure"] = {}
+            return
+
     global_counter, per_structure = analyze_amino_acid_frequency(STRUCTURES_CLEAN_PATH)
     ANALYSIS_PATH.mkdir(parents=True, exist_ok=True)
     save_frequency_results(ANALYSIS_PATH, global_counter, per_structure)
@@ -181,25 +222,77 @@ def step3_frequency(cache: dict) -> None:
     cache["per_structure"] = per_structure
 
 
-def step4_helix_analysis(cache: dict) -> None:
+def step4_helix_analysis(cache: dict, interactive: bool = True) -> None:
     """Etapa 4: Análise avançada de hélices com DSSP."""
+    import pandas as pd
     from cath_analysis.helix_analysis import run_helix_analysis
 
     print("\n" + "=" * 60)
     print("ETAPA 4 – ANÁLISE AVANÇADA DE HÉLICES")
     print("=" * 60 + "\n")
 
+    report_file = ANALYSIS_PATH / "helix_analysis_comprehensive_report.txt"
+    if report_file.exists():
+        from datetime import datetime
+        date_str = datetime.fromtimestamp(report_file.stat().st_mtime).strftime("%Y-%m-%d %H:%M")
+        print(f"  Resultados existentes encontrados (gerados em {date_str}).")
+        if interactive:
+            if not _ask_rerun("análise de hélices (DSSP)"):
+                print("  Carregando resultados anteriores...")
+                dssp_results: dict = {}
+                prop_csv = ANALYSIS_PATH / "helix_propensities.csv"
+                pos_csv = ANALYSIS_PATH / "helix_positions.csv"
+                if prop_csv.exists():
+                    dssp_results["propensity_df"] = pd.read_csv(prop_csv)
+                if pos_csv.exists():
+                    dssp_results["positions_df"] = pd.read_csv(pos_csv)
+                dssp_results["helix_lengths"] = []
+                dssp_results["heptad_data"] = None
+                cache["dssp_results"] = dssp_results
+                return
+        else:
+            print("  [INFO] Use --force-download para re-executar.")
+            cache["dssp_results"] = {}
+            return
+
     dssp_results = run_helix_analysis()
     cache["dssp_results"] = dssp_results
 
 
-def step5_helix_types(cache: dict) -> None:
+def step5_helix_types(cache: dict, interactive: bool = True) -> None:
     """Etapa 5: Classificação de tipos de hélices (H/G/I)."""
+    import pandas as pd
     from cath_analysis.helix_types import run_helix_type_analysis
 
     print("\n" + "=" * 60)
     print("ETAPA 5 – TIPOS DE HÉLICES")
     print("=" * 60 + "\n")
+
+    report_file = ANALYSIS_PATH / "helix_types_comprehensive_report.txt"
+    if report_file.exists():
+        from datetime import datetime
+        date_str = datetime.fromtimestamp(report_file.stat().st_mtime).strftime("%Y-%m-%d %H:%M")
+        print(f"  Resultados existentes encontrados (gerados em {date_str}).")
+        if interactive:
+            if not _ask_rerun("classificação de tipos de hélice (DSSP)"):
+                print("  Carregando resultados anteriores...")
+                helix_type_results: dict = {}
+                comp_csv = ANALYSIS_PATH / "helix_type_composition.csv"
+                top_csv = ANALYSIS_PATH / "helix_type_top_residues.csv"
+                stat_csv = ANALYSIS_PATH / "helix_type_statistical_comparison.csv"
+                if comp_csv.exists():
+                    helix_type_results["composition_df"] = pd.read_csv(comp_csv)
+                if top_csv.exists():
+                    helix_type_results["comparison_df"] = pd.read_csv(top_csv)
+                helix_type_results["stat_df"] = pd.read_csv(stat_csv) if stat_csv.exists() else pd.DataFrame()
+                helix_type_results["helix_counts"] = {}
+                helix_type_results["helix_lengths"] = {}
+                cache["helix_type_results"] = helix_type_results
+                return
+        else:
+            print("  [INFO] Use --force-download para re-executar.")
+            cache["helix_type_results"] = {}
+            return
 
     helix_type_results = run_helix_type_analysis()
     cache["helix_type_results"] = helix_type_results
@@ -601,6 +694,8 @@ def main() -> None:
                 step1_download(force=args.force_download, interactive=interactive)
             elif step_num == 2:
                 step2_clean(force=args.force_download, interactive=interactive)
+            elif step_num in (3, 4, 5):
+                STEPS_WITH_CACHE[step_num](cache, interactive=interactive)
             else:
                 STEPS_WITH_CACHE[step_num](cache)
         except Exception:  # noqa: BLE001

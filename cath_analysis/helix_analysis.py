@@ -13,6 +13,7 @@ import logging
 import shutil
 import subprocess
 from collections import Counter, defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 import numpy as np
@@ -27,6 +28,7 @@ from .config import (
     STRUCTURES_CLEAN_PATH,
     HELIX_PROPENSITY,
     HYDROPHOBIC_AA,
+    PROCESS_WORKERS,
     STANDARD_AMINO_ACIDS,
     glob_pdb,
 )
@@ -164,26 +166,28 @@ def analyze_secondary_structure_with_dssp(
     global_lengths: list[int] = []
     success = failed = 0
 
-    print(f"\nProcessando {len(pdb_files):,} estruturas com DSSP...\n")
+    print(f"\nProcessando {len(pdb_files):,} estruturas com DSSP (workers: {PROCESS_WORKERS})...\n")
 
-    with tqdm(total=len(pdb_files), desc="DSSP Analysis") as pbar:
-        for pdb_file in pdb_files:
-            result = analyze_single_structure_dssp(pdb_file)
+    with ThreadPoolExecutor(max_workers=PROCESS_WORKERS) as executor:
+        futures = {executor.submit(analyze_single_structure_dssp, f): f for f in pdb_files}
+        with tqdm(total=len(pdb_files), desc="DSSP Analysis") as pbar:
+            for future in as_completed(futures):
+                result = future.result()
 
-            if result["status"] == "success":
-                success += 1
-                for aa, n in result["helix_residues"].items():
-                    global_helix[aa] += n
-                for aa, n in result["all_residues"].items():
-                    global_all[aa] += n
-                for pos_type, pos_data in result["helix_positions"].items():
-                    for aa, n in pos_data.items():
-                        global_positions[pos_type][aa] += n
-                global_lengths.extend(result["helix_lengths"])
-            else:
-                failed += 1
+                if result["status"] == "success":
+                    success += 1
+                    for aa, n in result["helix_residues"].items():
+                        global_helix[aa] += n
+                    for aa, n in result["all_residues"].items():
+                        global_all[aa] += n
+                    for pos_type, pos_data in result["helix_positions"].items():
+                        for aa, n in pos_data.items():
+                            global_positions[pos_type][aa] += n
+                    global_lengths.extend(result["helix_lengths"])
+                else:
+                    failed += 1
 
-            pbar.update(1)
+                pbar.update(1)
 
     print(f"\nDSSP concluído: {success} sucessos, {failed} falhas")
 
