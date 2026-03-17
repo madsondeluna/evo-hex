@@ -47,6 +47,8 @@ pdb_files/
 cleaned_pdb/
 output/
 logs/
+cath-domain-list.txt
+mainly_alpha_pdb_codes.txt
 
 # macOS
 .DS_Store
