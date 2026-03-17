@@ -188,7 +188,7 @@ def save_cleaning_results(logs_path: Path, results: dict) -> None:
     avg = results["total_residues"] / success if success > 0 else 0.0
     report_lines = [
         f"{'='*60}",
-        "RELATÓRIO DE LIMPEZA - CATH MAINLY-ALPHA",
+        "RELATÓRIO DE LIMPEZA - EVO-HEX",
         f"{'='*60}\n",
         f"Total de estruturas:      {results['total']:,}",
         f"Limpas com sucesso:       {results['success']:,}",

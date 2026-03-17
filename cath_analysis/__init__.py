@@ -1,5 +1,5 @@
 """
-cath_analysis – Pipeline de análise de estruturas CATH Mainly-Alpha.
+cath_analysis – Pipeline de análise de estruturas Evo-Hex.
 
 Módulos
 -------

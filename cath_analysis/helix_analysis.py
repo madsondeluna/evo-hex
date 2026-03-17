@@ -339,7 +339,7 @@ def save_comprehensive_report(
     with report_file.open("w") as f:
         f.write("=" * 80 + "\n")
         f.write("ANÁLISE ABRANGENTE DE COMPOSIÇÃO DE HÉLICES ALPHA\n")
-        f.write("Estruturas CATH Mainly-Alpha\n")
+        f.write("Estruturas Evo-Hex\n")
         f.write("=" * 80 + "\n\n")
 
         f.write("### PROPENSÃO DE AMINOÁCIDOS PARA HÉLICES ###\n\n")

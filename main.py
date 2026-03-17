@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Pipeline CATH Mainly-Alpha – ponto de entrada principal.
+Pipeline Evo-Hex – ponto de entrada principal.
 
 Etapas
 ------
@@ -513,7 +513,7 @@ def _list_plots() -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Pipeline CATH Mainly-Alpha",
+        description="Pipeline Evo-Hex",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )
@@ -583,7 +583,7 @@ def main() -> None:
         steps_to_run = sorted(ALL_STEPS.keys())
 
     print("=" * 60)
-    print("PIPELINE CATH MAINLY-ALPHA")
+    print("PIPELINE EVO-HEX")
     print(f"  Base:      {BASE_PATH}")
     print(f"  Etapas:    {steps_to_run}")
     print(f"  Interativo: {'Sim' if interactive else 'Não'}")

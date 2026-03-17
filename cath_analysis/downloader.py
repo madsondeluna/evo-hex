@@ -258,7 +258,7 @@ def save_download_results(base_path: Path, pdb_codes: set[str], results: dict) -
     success_rate = (results["success"] + results["exists"]) / total * 100 if total else 0.0
     report = (
         f"{'='*60}\n"
-        f"RELATÓRIO DE DOWNLOAD - CATH MAINLY-ALPHA\n"
+        f"RELATÓRIO DE DOWNLOAD - EVO-HEX\n"
         f"{'='*60}\n\n"
         f"Total de estruturas:      {total}\n"
         f"Downloads bem-sucedidos:  {results['success']}\n"

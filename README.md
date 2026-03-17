@@ -1,4 +1,4 @@
-# CATH Mainly-Alpha — Pipeline de Análise Estrutural e Evolutiva
+# Evo-Hex — Pipeline de Análise Estrutural e Evolutiva
 
 Pipeline modular em Python para download, limpeza e análise de estruturas proteicas
 da classe **Mainly Alpha** do banco de dados CATH. Gera 21 visualizações cobrindo

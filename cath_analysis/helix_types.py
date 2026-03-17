@@ -267,7 +267,7 @@ def save_helix_type_report(
     with report_file.open("w") as f:
         f.write("=" * 80 + "\n")
         f.write("ANÁLISE DETALHADA DE TIPOS DE HÉLICES\n")
-        f.write("Estruturas CATH Mainly-Alpha\n")
+        f.write("Estruturas Evo-Hex\n")
         f.write("=" * 80 + "\n\n")
         f.write(f"Estruturas analisadas: {results['structures_analyzed']}\n\n")
 
