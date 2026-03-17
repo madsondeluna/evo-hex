@@ -218,7 +218,7 @@ def step3_frequency(cache: dict, interactive: bool = True, use_s40: bool = False
             cache["per_structure"] = {}
             return
 
-    global_counter, per_structure = analyze_amino_acid_frequency(STRUCTURES_CLEAN_PATH)
+    global_counter, per_structure = analyze_amino_acid_frequency(get_dssp_dir(use_s40))
     ANALYSIS_PATH.mkdir(parents=True, exist_ok=True)
     save_frequency_results(ANALYSIS_PATH, global_counter, per_structure)
     print_frequency_summary(global_counter, per_structure)
