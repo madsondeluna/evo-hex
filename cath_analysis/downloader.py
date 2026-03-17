@@ -49,9 +49,9 @@ def check_existing_data() -> dict:
         return datetime.fromtimestamp(path.stat().st_mtime).strftime("%Y-%m-%d %H:%M")
 
     cath_file = BASE_PATH / "cath-domain-list.txt"
-    raw_pdbs = list(STRUCTURES_PATH.glob("*.pdb")) if STRUCTURES_PATH.exists() else []
+    raw_pdbs = [p for p in STRUCTURES_PATH.glob("*.pdb") if p.exists()] if STRUCTURES_PATH.exists() else []
     clean_pdbs = (
-        list((BASE_PATH / "structures_clean").glob("*.pdb"))
+        [p for p in (BASE_PATH / "structures_clean").glob("*.pdb") if p.exists()]
         if (BASE_PATH / "structures_clean").exists()
         else []
     )
