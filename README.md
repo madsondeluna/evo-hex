@@ -1,4 +1,4 @@
-# Evo-Hex — Pipeline de Análise Estrutural e Evolutiva
+# Evo-Hex: Pipeline de Análise Estrutural e Evolutiva
 
 Pipeline modular em Python para download, limpeza e análise de estruturas proteicas
 da classe **Mainly Alpha** do banco de dados CATH. Gera 21 visualizações cobrindo
@@ -28,7 +28,7 @@ restrições estruturais e viés do código genético.
 de domínios proteicos com estrutura 3D determinada experimentalmente. Cada domínio é
 classificado pela composição de sua estrutura secundária.
 
-A classe **1 — Mainly Alpha** agrupa domínios cuja estrutura é dominada por hélices
+A classe **1 - Mainly Alpha** agrupa domínios cuja estrutura é dominada por hélices
 alpha (≥60% de resíduos em conformação helicoidal). Essa classe é biologicamente
 relevante por incluir:
 
@@ -150,7 +150,7 @@ Responda `N` (ou Enter) para pular e usar os dados existentes.
 | `python main.py --steps 3 4 5` | Executa apenas as etapas especificadas |
 | `python main.py --force-download` | Re-baixa e relimpa sem perguntar |
 | `python main.py --skip-download` | Pula etapas 1-2 sem perguntar |
-| `python main.py --no-interactive` | Sem menus — executa tudo automaticamente |
+| `python main.py --no-interactive` | Sem menus, executa tudo automaticamente |
 | `python main.py --plots g3 g4` | Pré-seleciona grupos de gráficos no menu |
 | `python main.py --plots helical_wheel_average pca_aa_composition` | Pré-seleciona gráficos individuais |
 | `python main.py --list-plots` | Lista todos os 21 gráficos disponíveis e sai |
@@ -183,7 +183,7 @@ Após as etapas de análise, o menu aparece automaticamente:
 
 ```
 ═══════════════════════════════════════════════════════════════════
-  CATH ANALYSIS – SELETOR DE GRÁFICOS EVOLUTIVOS
+  EVO-HEX - SELETOR DE GRAFICOS EVOLUTIVOS
 ═══════════════════════════════════════════════════════════════════
 
   1. Análise Básica de Hélices
@@ -206,7 +206,7 @@ Após as etapas de análise, o menu aparece automaticamente:
 
 ## 5. Etapas do pipeline
 
-### Etapa 1 — Download de estruturas
+### Etapa 1: Download de estruturas
 
 Baixa o índice de domínios do CATH e faz download paralelo das estruturas PDB
 da classe Mainly-Alpha (classe 1) diretamente do RCSB.
@@ -219,7 +219,7 @@ da classe Mainly-Alpha (classe 1) diretamente do RCSB.
 
 **Saída esperada:** milhares de arquivos `.pdb` em `structures/`
 
-### Etapa 2 — Limpeza de estruturas
+### Etapa 2: Limpeza de estruturas
 
 Processa cada PDB para remover ruído e padronizar o formato:
 
@@ -232,14 +232,14 @@ Processa cada PDB para remover ruído e padronizar o formato:
 
 **Saída esperada:** arquivos `.pdb` limpos em `structures_clean/`
 
-### Etapa 3 — Frequência de aminoácidos
+### Etapa 3: Frequência de aminoácidos
 
 Conta a ocorrência de cada aminoácido em todas as estruturas limpas.
 
 - Contagem global e por estrutura
 - Gera: `amino_acid_frequencies_global.txt`, `amino_acid_frequencies_per_structure.csv`
 
-### Etapa 4 — Análise avançada de hélices (DSSP)
+### Etapa 4: Análise avançada de hélices (DSSP)
 
 Usa o DSSP para determinar a estrutura secundária de cada resíduo e analisa
 a composição das hélices em profundidade:
@@ -249,7 +249,7 @@ a composição das hélices em profundidade:
 - Distribuição de comprimentos de hélices
 - Padrão heptad de hidrofobicidade
 
-### Etapa 5 — Tipos de hélices (H/G/I)
+### Etapa 5: Tipos de hélices (H/G/I)
 
 Classifica cada hélice pelo tipo DSSP e compara composição:
 
@@ -259,7 +259,7 @@ Classifica cada hélice pelo tipo DSSP e compara composição:
 | G | 3-10 helix | i → i+3 | 3,0 |
 | I | Pi helix | i → i+5 | 4,4 |
 
-### Etapa 6 — Coleta de dados evolutivos
+### Etapa 6: Coleta de dados evolutivos
 
 Passo DSSP único e abrangente que coleta dados para todas as análises evolutivas:
 
@@ -273,7 +273,7 @@ Passo DSSP único e abrangente que coleta dados para todas as análises evolutiv
 
 ## 6. Catálogo de análises e gráficos
 
-### Grupo 1 — Análise Básica de Hélices
+### Grupo 1: Análise Básica de Hélices
 
 #### 1.1 Propensão para hélices
 **Arquivo:** `helix_propensities.png`
@@ -309,16 +309,16 @@ identificar restrições evolutivas posicionais.
 
 Histograma + boxplot dos comprimentos de hélices em resíduos.
 
-**Valor:** Hélices alpha estáveis tendem a ter 10–20 resíduos. A distribuição
+**Valor:** Hélices alpha estáveis tendem a ter 10-20 resíduos. A distribuição
 de comprimentos reflete a pressão seletiva para manter a hélice coesa: hélices
-muito curtas (4–6 res.) têm menor estabilidade térmica.
+muito curtas (4-6 res.) têm menor estabilidade térmica.
 
 ---
 
 #### 1.4 Padrão heptad
 **Arquivo:** `heptad_pattern.png`
 
-Frequência de resíduos hidrofóbicos em cada posição do heptad repeat (a–g).
+Frequência de resíduos hidrofóbicos em cada posição do heptad repeat (a-g).
 
 **Valor:** Em coiled-coils, as posições *a* e *d* do heptad são hidrofóbicas para
 formar a interface entre as cadeias. Esse gráfico revela se o conjunto CATH
@@ -327,7 +327,7 @@ de pressão seletiva para periodicidade hidrofóbica.
 
 ---
 
-### Grupo 2 — Tipos de Hélices
+### Grupo 2: Tipos de Hélices
 
 #### 2.1 Distribuição de tipos H/G/I
 **Arquivo:** `helix_type_distribution.png`
@@ -367,7 +367,7 @@ Barras horizontais com os 10 AAs mais frequentes em cada tipo de hélice.
 Boxplot + histograma sobrepostos comparando a distribuição de comprimentos entre H,
 G e I.
 
-**Valor:** 3-10 helices são estruturalmente limitadas a 3–6 resíduos pela geometria
+**Valor:** 3-10 helices são estruturalmente limitadas a 3-6 resíduos pela geometria
 da ligação de hidrogênio i→i+3. Alpha helices são estáveis de 5 a >30 resíduos.
 O gráfico quantifica essa distribuição no conjunto real.
 
@@ -384,7 +384,7 @@ evolutiva entre tipos de hélice.
 
 ---
 
-### Grupo 3 — Restrições Estruturais
+### Grupo 3: Restrições Estruturais
 
 #### 3.1 Helical wheel composto
 **Arquivo:** `helical_wheel_average.png`
@@ -405,7 +405,7 @@ uniforme. É uma das análises mais diretas de restrição estrutural evolutiva.
 **Arquivo:** `hydrophobic_moment_distribution.png`
 
 Distribuição do momento hidrofóbico (μH) por hélice, calculado pela escala de
-Eisenberg. Hélices são classificadas em anfipáticas baixas (<0,2), médias (0,2–0,4)
+Eisenberg. Hélices são classificadas em anfipáticas baixas (<0,2), médias (0,2-0,4)
 e altas (≥0,4).
 
 **Valor:** O momento hidrofóbico é um preditor de função. Hélices com μH alto são
@@ -432,7 +432,7 @@ evolutivas distintas (e.g., hélices de proteínas termófilas).
 
 ---
 
-### Grupo 4 — Composição e Variabilidade
+### Grupo 4: Composição e Variabilidade
 
 #### 4.1 PCA da composição por estrutura
 **Arquivo:** `pca_aa_composition.png`
@@ -466,7 +466,7 @@ Heatmap 20×20 onde cada célula representa a frequência relativa de pares de A
 que aparecem juntos na mesma hélice.
 
 **Valor:** Pares com alta co-ocorrência podem refletir:
-- **Interações físicas:** GLU–LYS e ASP–ARG formam salt bridges (i→i+4) que
+- **Interações físicas:** GLU-LYS e ASP-ARG formam salt bridges (i→i+4) que
   estabilizam hélices.
 - **Perfis evolutivos compartilhados:** AAs com propensão similar tendem a ser
   trocados por mutação e co-ocorrem mais.
@@ -482,7 +482,7 @@ frequências marginais).
 **Arquivo:** `helix_length_vs_composition.png`
 
 Barras agrupadas: frequência de cada grupo físico-químico (hidrofóbico, polar,
-carregado+, carregado–, especial) em hélices curtas (4–9 res.), médias (10–19)
+carregado+, carregado-, especial) em hélices curtas (4-9 res.), médias (10-19)
 e longas (≥20).
 
 **Valor:** Hélices longas tendem a ser mais ricas em AAs de alta propensão (ALA,
@@ -492,7 +492,7 @@ em contextos curtos onde a hélice não precisa ser mantida por muitos resíduos
 
 ---
 
-### Grupo 5 — Transições e História Evolutiva
+### Grupo 5: Transições e História Evolutiva
 
 #### 5.1 Matriz de transição H→G→I
 **Arquivo:** `helix_transition_matrix.png`
@@ -501,7 +501,7 @@ Heatmap normalizado com a probabilidade de cada tipo de hélice ser seguido por
 outro tipo dentro da mesma proteína.
 
 **Valor:** Revela se existe uma hierarquia de transições. A hipótese evolutiva é
-que 3-10 helices são estados ancestrais ou transicionais de alpha helices — proteínas
+que 3-10 helices são estados ancestrais ou transicionais de alpha helices, proteínas
 que "experimentam" hélices mais curtas antes de estabilizar em alpha. Uma alta taxa
 de H→G seguida de G→H indicaria coexistência de ambos os tipos no mesmo contexto
 estrutural.
@@ -524,7 +524,7 @@ Picos em comprimentos específicos podem indicar contextos estruturais especiais
 #### 5.3 Entropia de Shannon por posição do heptad
 **Arquivo:** `shannon_entropy_heptad.png`
 
-Entropia de Shannon calculada a partir da distribuição de AAs em cada posição (a–g)
+Entropia de Shannon calculada a partir da distribuição de AAs em cada posição (a-g)
 do heptad. Baixa entropia = maior conservação = maior pressão seletiva.
 
 **Valor:** Em coiled-coils clássicos, posições *a* e *d* têm baixa entropia
@@ -534,7 +534,7 @@ de coiled-coils no conjunto e da magnitude da seleção nessas posições.
 
 ---
 
-### Grupo 6 — Viés do Código Genético
+### Grupo 6: Viés do Código Genético
 
 #### 6.1 Degenerescência de códons vs. propensão
 **Arquivo:** `codon_degeneracy_vs_propensity.png`
@@ -549,7 +549,7 @@ Dois scatters lado a lado:
   mais por pura probabilidade mutacional.
 
 Se a correlação propensão×códons é fraca, a composição das hélices é dominada por
-seleção. Se é forte, o viés do código genético tem papel relevante — uma questão
+seleção. Se é forte, o viés do código genético tem papel relevante, uma questão aberta
 aberta em evolução molecular.
 
 ---
@@ -565,7 +565,7 @@ Frequências de referência: proteoma humano médio (UniProt/Swiss-Prot).
 
 **Valor:** Normaliza a composição das hélices pelo background proteômico. Um AA
 pode ser frequente nas hélices simplesmente porque é frequente em proteínas em geral
-(caso do LEU). O enriquecimento real — controlando pelo background — revela a
+(caso do LEU). O enriquecimento real (controlando pelo background) revela a
 seleção verdadeira. ALA com enriquecimento >1.3 e PRO com <0.5 são esperados;
 desvios desses valores indicam particularidades da classe Mainly-Alpha.
 
@@ -659,8 +659,8 @@ menu.py ────────────────────────
 | `requests` | 2.28 | Download de PDBs |
 | `tqdm` | 4.65 | Barras de progresso |
 | `scipy` | 1.11 | (reservado para extensões) |
-| `scikit-learn` | — | Opcional: PCA (etapa 4.1) |
-| `mkdssp` | — | Externo: estrutura secundária |
+| `scikit-learn` | - | Opcional: PCA (etapa 4.1) |
+| `mkdssp` | - | Externo: estrutura secundária |
 
 ---
 
@@ -706,4 +706,4 @@ pip install scikit-learn
 
 > Sillitoe I. et al. (2021). CATH: expanding the horizons of structure-based
 > functional annotations for genome sequences. *Nucleic Acids Research*, 49(D1),
-> D377–D385. https://doi.org/10.1093/nar/gkaa1079
+> D377-D385. https://doi.org/10.1093/nar/gkaa1079

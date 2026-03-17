@@ -171,7 +171,7 @@ def _clear() -> None:
 
 def _print_header() -> None:
     print("\n" + "=" * 65)
-    print("  CATH ANALYSIS – SELETOR DE GRAFICOS EVOLUTIVOS")
+    print("  EVO-HEX – SELETOR DE GRAFICOS EVOLUTIVOS")
     print("=" * 65)
 
 
