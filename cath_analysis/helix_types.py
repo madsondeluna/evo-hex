@@ -16,6 +16,8 @@ from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
+warnings.filterwarnings("ignore", category=UserWarning, message="parse error")
+
 import numpy as np
 import pandas as pd
 from Bio import PDB
@@ -109,9 +111,7 @@ def _classify_single_pdb(pdb_file: Path) -> tuple[list, list] | None:
         parser = PDB.PDBParser(QUIET=True)
         structure = parser.get_structure(pdb_file.stem, str(pdb_file))
         model = structure[0]
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", category=UserWarning, message="parse error")
-            dssp = DSSP(model, str(pdb_file), dssp="mkdssp", file_type="PDB")
+        dssp = DSSP(model, str(pdb_file), dssp="mkdssp", file_type="PDB")
         ss_seq = [dssp[k][2] for k in dssp.property_keys]
         aa_seq = [dssp[k][1] for k in dssp.property_keys]
         return ss_seq, aa_seq

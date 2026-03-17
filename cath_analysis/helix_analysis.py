@@ -17,6 +17,10 @@ from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
+# mkdssp 4.x warns on stderr when input is PDB (expects mmCIF by default).
+# BioPython handles the format correctly - this is cosmetic noise only.
+warnings.filterwarnings("ignore", category=UserWarning, message="parse error")
+
 import numpy as np
 import pandas as pd
 from Bio import PDB
@@ -120,9 +124,7 @@ def analyze_single_structure_dssp(pdb_file: Path) -> dict:
     try:
         structure = parser.get_structure(pdb_code, str(pdb_file))
         model = structure[0]
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", category=UserWarning, message="parse error")
-            dssp = DSSP(model, str(pdb_file), dssp="mkdssp", file_type="PDB")
+        dssp = DSSP(model, str(pdb_file), dssp="mkdssp", file_type="PDB")
 
         ss_seq = [dssp[k][2] for k in dssp.property_keys]
         aa_seq = [dssp[k][1] for k in dssp.property_keys]
