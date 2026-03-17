@@ -12,6 +12,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+import warnings
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from .config import HYDROPHOBIC_AA, PROCESS_WORKERS, STANDARD_AMINO_ACIDS, glob_pdb
@@ -77,7 +78,9 @@ def _process_single_pdb_evo(pdb_path: Path) -> dict | None:
         parser = PDBParser(QUIET=True)
         structure = parser.get_structure(pdb_path.stem, str(pdb_path))
         model = structure[0]
-        dssp = DSSP(model, str(pdb_path), dssp="mkdssp", file_type="PDB")
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=UserWarning, message="parse error")
+            dssp = DSSP(model, str(pdb_path), dssp="mkdssp", file_type="PDB")
     except Exception:
         return None
 
