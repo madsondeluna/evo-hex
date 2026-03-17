@@ -52,7 +52,34 @@ hélice evoluem?
 - Python 3.10 ou superior
 - `mkdssp` (obrigatório para análises de estrutura secundária)
 
+### Criar e ativar um ambiente virtual
+
+**Sempre trabalhe dentro de um ambiente virtual.** Isso isola as dependências do
+projeto e evita conflitos com outros pacotes instalados no sistema.
+
+```bash
+# Criar o ambiente (apenas uma vez)
+python3 -m venv .venv
+
+# Ativar no macOS/Linux
+source .venv/bin/activate
+
+# Ativar no Windows
+.venv\Scripts\activate
+```
+
+Você saberá que o ambiente está ativo quando o prompt mostrar `(.venv)` no início.
+Para desativar ao terminar:
+
+```bash
+deactivate
+```
+
+> **Dica:** adicione `.venv/` ao seu `.gitignore` para não versionar o ambiente.
+
 ### Instalar dependências Python
+
+Com o ambiente virtual ativo:
 
 ```bash
 pip install -r requirements.txt
