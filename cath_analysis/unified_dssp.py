@@ -110,17 +110,13 @@ def _process_single_pdb_unified(pdb_path: Path) -> dict | None:
     # --- Primeiro loop: acumula aa_total_3 e heptad para todos os residuos ---
     for global_pos, record in enumerate(dssp_records):
         ss = record[2]
-        try:
-            res_obj = record[1]
-            res3 = res_obj.resname.strip() if hasattr(res_obj, "resname") else None
-        except Exception:
-            res3 = None
+        aa1 = record[1]  # DSSP retorna codigo de 1 letra diretamente
+        res3 = ONE_TO_THREE.get(aa1)
 
         if res3 and res3 in STANDARD_AMINO_ACIDS:
             aa_total_3[res3] += 1
 
-        aa1 = _res3_to_1(res3) if res3 else None
-        if aa1:
+        if aa1 and res3:
             heptad_local[global_pos % 7][aa1] += 1
 
         if ss in _HELIX_CODES:
@@ -146,13 +142,9 @@ def _process_single_pdb_unified(pdb_path: Path) -> dict | None:
 
         # Coleta segmento continuo do mesmo tipo
         while i < n and dssp_records[i][2] == helix_type:
-            try:
-                res_obj = dssp_records[i][1]
-                res3 = res_obj.resname.strip() if hasattr(res_obj, "resname") else None
-            except Exception:
-                res3 = None
-            aa1 = _res3_to_1(res3) if res3 else None
-            if aa1:
+            aa1 = dssp_records[i][1]  # DSSP retorna codigo de 1 letra diretamente
+            res3 = ONE_TO_THREE.get(aa1)
+            if aa1 and res3:
                 segment_1.append(aa1)
             if res3 and res3 in STANDARD_AMINO_ACIDS:
                 segment_3.append(res3)
