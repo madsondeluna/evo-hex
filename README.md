@@ -729,6 +729,24 @@ pip install scikit-learn
 
 ---
 
+**Q: A limpeza mostra o dobro de estruturas esperadas (ex: 101.978 em vez de ~51.000). Por que?**
+
+Isso ocorre quando o diretório `structures/` ja contem arquivos de execucoes anteriores
+do pipeline (ou do notebook original) no momento em que um novo download e iniciado.
+O cleaner processa todos os PDBs presentes, independente da origem.
+
+Workaround atual: remova manualmente o diretório antes de rodar:
+```bash
+rm -rf /Volumes/promethion/cath/structures/
+python main.py
+```
+
+**Bug conhecido (a corrigir):** o flag `--force-download` deveria limpar o diretório
+`structures/` antes de iniciar o novo download, garantindo que apenas as estruturas
+da sessão atual sejam processadas.
+
+---
+
 **Q: Como citar o CATH?**
 
 > Sillitoe I. et al. (2021). CATH: expanding the horizons of structure-based
