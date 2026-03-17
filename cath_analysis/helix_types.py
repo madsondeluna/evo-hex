@@ -75,7 +75,7 @@ def classify_helix_types(clean_dir: Path) -> dict:
             try:
                 structure = parser.get_structure(pdb_code, str(pdb_file))
                 model = structure[0]
-                dssp = DSSP(model, str(pdb_file), dssp="mkdssp")
+                dssp = DSSP(model, str(pdb_file), dssp="mkdssp", file_type="PDB")
 
                 ss_seq = [dssp[k][2] for k in dssp.property_keys]
                 aa_seq = [dssp[k][1] for k in dssp.property_keys]

@@ -118,7 +118,7 @@ def collect_evolutionary_data(clean_dir: Path) -> dict:
         try:
             structure = parser.get_structure(pdb_path.stem, str(pdb_path))
             model = structure[0]
-            dssp = DSSP(model, str(pdb_path), dssp="mkdssp")
+            dssp = DSSP(model, str(pdb_path), dssp="mkdssp", file_type="PDB")
         except Exception:
             continue
 
