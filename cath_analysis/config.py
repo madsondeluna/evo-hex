@@ -11,6 +11,7 @@ BASE_PATH = Path("/Volumes/promethion/cath")
 
 STRUCTURES_PATH = BASE_PATH / "structures"
 STRUCTURES_CLEAN_PATH = BASE_PATH / "structures_clean"
+STRUCTURES_CLEAN_S40_PATH = BASE_PATH / "structures_clean_s40"
 LOGS_PATH = BASE_PATH / "logs"
 ANALYSIS_PATH = BASE_PATH / "analysis"
 

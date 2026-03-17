@@ -1,27 +1,29 @@
 #!/usr/bin/env python3
 """
-Pipeline Evo-Hex – ponto de entrada principal.
+Pipeline Evo-Hex - ponto de entrada principal.
 
 Etapas
 ------
-1. Download da lista de domínios CATH e estruturas PDB
-2. Limpeza (cadeia A, sem heteroátomos)
-3. Análise de frequência de aminoácidos
-4. Análise avançada de hélices com DSSP (propensão, posições, comprimentos)
-5. Classificação e comparação de tipos de hélices (H/G/I)
-6. Coleta de dados evolutivos (hélice wheel, momentos hidrofóbicos, etc.)
+1. Download da lista de dominios CATH e estruturas PDB
+2. Limpeza (cadeia A, sem heteroatomos)
+3. Analise de frequencia de aminoacidos
+4. Passo DSSP unificado (coleta dados para etapas 4, 5 e 6 de uma vez)
+5. Tipos de helices (H/G/I) - dados ja coletados na etapa 4
+6. Dados evolutivos - dados ja coletados na etapa 4
 
 Uso
 ---
     python main.py                      # todas as etapas, modo interativo
-    python main.py --explore            # pula download/limpeza, vai direto à análise
+    python main.py --explore            # pula download/limpeza, vai direto a analise
     python main.py --steps 3 4 5 6     # mesmo que --explore (manual)
     python main.py --steps 1 2         # apenas download e limpeza
     python main.py --force-download    # baixa mesmo se dados existirem
     python main.py --skip-download     # pula etapas 1-2 sem perguntar
     python main.py --no-interactive    # sem menus, executa tudo automaticamente
-    python main.py --plots g3 g4       # pré-seleciona grupos no menu de gráficos
-    python main.py --list-plots        # lista todos os gráficos disponíveis
+    python main.py --plots g3 g4       # pre-seleciona grupos no menu de graficos
+    python main.py --list-plots        # lista todos os graficos disponiveis
+    python main.py --filter-s40        # cria subconjunto nao-redundante S40
+    python main.py --steps 4 5 6 --use-s40  # analisa apenas estruturas S40
 """
 
 import argparse
@@ -35,6 +37,7 @@ from cath_analysis.config import (
     BASE_PATH,
     LOGS_PATH,
     STRUCTURES_CLEAN_PATH,
+    STRUCTURES_CLEAN_S40_PATH,
     STRUCTURES_PATH,
 )
 
@@ -49,52 +52,59 @@ logger = logging.getLogger(__name__)
 # ── Etapas do pipeline ────────────────────────────────────────────────────────
 
 def _show_existing_data_info(info: dict) -> None:
-    """Imprime resumo dos dados já existentes no disco."""
-    print("\n  ┌─ Dados existentes ───────────────────────────────────┐")
+    """Imprime resumo dos dados ja existentes no disco."""
+    print("\n  +- Dados existentes ---------------------------------------------------+")
     if info["has_cath_list"]:
-        print(f"  │  Índice CATH:       atualizado em {info['cath_list_date']}")
+        print(f"  |  Indice CATH:       atualizado em {info['cath_list_date']}")
     else:
-        print("  │  Índice CATH:       não encontrado")
+        print("  |  Indice CATH:       nao encontrado")
     if info["raw_count"]:
-        print(f"  │  Estruturas raw:    {info['raw_count']:,} PDBs  (último: {info['raw_date']})")
+        print(f"  |  Estruturas raw:    {info['raw_count']:,} PDBs  (ultimo: {info['raw_date']})")
     else:
-        print("  │  Estruturas raw:    nenhuma")
+        print("  |  Estruturas raw:    nenhuma")
     if info["clean_count"]:
-        print(f"  │  Estruturas clean:  {info['clean_count']:,} PDBs  (último: {info['clean_date']})")
+        print(f"  |  Estruturas clean:  {info['clean_count']:,} PDBs  (ultimo: {info['clean_date']})")
     else:
-        print("  │  Estruturas clean:  nenhuma")
-    print("  └──────────────────────────────────────────────────────┘")
+        print("  |  Estruturas clean:  nenhuma")
+    print("  +----------------------------------------------------------------------+")
 
 
 def _ask_redownload() -> bool:
-    """Pergunta ao usuário se deseja baixar novamente. Retorna True se sim."""
+    """Pergunta ao usuario se deseja baixar novamente. Retorna True se sim."""
     while True:
         resp = input("\n  Baixar novamente? [s/N] ").strip().lower()
         if resp in ("s", "sim", "y", "yes"):
             return True
-        if resp in ("", "n", "não", "nao", "no"):
+        if resp in ("", "n", "nao", "no"):
             return False
-        print("  Responda 's' para sim ou 'n' para não.")
+        print("  Responda 's' para sim ou 'n' para nao.")
 
 
 def _ask_rerun(label: str) -> bool:
-    """Pergunta ao usuário se deseja re-executar uma etapa. Retorna True se sim."""
+    """Pergunta ao usuario se deseja re-executar uma etapa. Retorna True se sim."""
     while True:
         resp = input(f"\n  Re-executar {label}? [s/N] ").strip().lower()
         if resp in ("s", "sim", "y", "yes"):
             return True
-        if resp in ("", "n", "não", "nao", "no"):
+        if resp in ("", "n", "nao", "no"):
             return False
-        print("  Responda 's' para sim ou 'n' para não.")
+        print("  Responda 's' para sim ou 'n' para nao.")
+
+
+def get_dssp_dir(use_s40: bool) -> Path:
+    """Retorna o diretorio de estruturas a usar nas etapas DSSP."""
+    if use_s40 and STRUCTURES_CLEAN_S40_PATH.exists():
+        count = sum(1 for _ in STRUCTURES_CLEAN_S40_PATH.glob("*.pdb"))
+        if count > 0:
+            print(f"  [S40] Usando {count:,} estruturas nao-redundantes de {STRUCTURES_CLEAN_S40_PATH}")
+            return STRUCTURES_CLEAN_S40_PATH
+        else:
+            print("  [AVISO] Diretorio S40 vazio. Use --filter-s40 primeiro. Usando clean/ completo.")
+    return STRUCTURES_CLEAN_PATH
 
 
 def step1_download(force: bool = False, interactive: bool = True) -> None:
-    """Etapa 1: Download de estruturas PDB mainly-alpha.
-
-    Args:
-        force: Se True, baixa sem perguntar mesmo que os dados existam.
-        interactive: Se True, pergunta ao usuário quando dados já existem.
-    """
+    """Etapa 1: Download de estruturas PDB mainly-alpha."""
     from cath_analysis.downloader import (
         check_existing_data,
         download_cath_domain_list,
@@ -106,7 +116,7 @@ def step1_download(force: bool = False, interactive: bool = True) -> None:
     )
 
     print("\n" + "=" * 60)
-    print("ETAPA 1 – DOWNLOAD DE ESTRUTURAS")
+    print("ETAPA 1 - DOWNLOAD DE ESTRUTURAS")
     print("=" * 60)
 
     info = check_existing_data()
@@ -132,12 +142,7 @@ def step1_download(force: bool = False, interactive: bool = True) -> None:
 
 
 def step2_clean(force: bool = False, interactive: bool = True) -> None:
-    """Etapa 2: Limpeza das estruturas PDB.
-
-    Args:
-        force: Se True, reprocessa mesmo que já existam arquivos limpos.
-        interactive: Se True, pergunta ao usuário quando dados já existem.
-    """
+    """Etapa 2: Limpeza das estruturas PDB."""
     from cath_analysis.downloader import check_existing_data
     from cath_analysis.cleaner import (
         clean_all_structures,
@@ -146,7 +151,7 @@ def step2_clean(force: bool = False, interactive: bool = True) -> None:
     )
 
     print("\n" + "=" * 60)
-    print("ETAPA 2 – LIMPEZA DE ESTRUTURAS")
+    print("ETAPA 2 - LIMPEZA DE ESTRUTURAS")
     print("=" * 60)
 
     info = check_existing_data()
@@ -155,12 +160,12 @@ def step2_clean(force: bool = False, interactive: bool = True) -> None:
     if has_clean and not force:
         _show_existing_data_info(info)
         if interactive:
-            print(f"\n  Já existem {info['clean_count']:,} estruturas limpas.")
+            print(f"\n  Ja existem {info['clean_count']:,} estruturas limpas.")
             if not _ask_redownload():
                 print("  Limpeza ignorada. Usando estruturas existentes.")
                 return
         else:
-            print(f"\n  [INFO] {info['clean_count']:,} estruturas limpas já existem. Use --force-download para reprocessar.")
+            print(f"\n  [INFO] {info['clean_count']:,} estruturas limpas ja existem. Use --force-download para reprocessar.")
             return
 
     print()
@@ -171,8 +176,8 @@ def step2_clean(force: bool = False, interactive: bool = True) -> None:
         print_cleaning_summary(clean_results, STRUCTURES_PATH, STRUCTURES_CLEAN_PATH)
 
 
-def step3_frequency(cache: dict, interactive: bool = True) -> None:
-    """Etapa 3: Análise de frequência de aminoácidos."""
+def step3_frequency(cache: dict, interactive: bool = True, use_s40: bool = False) -> None:
+    """Etapa 3: Analise de frequencia de aminoacidos."""
     from collections import Counter
     import pandas as pd
     from cath_analysis.frequency_analysis import (
@@ -182,7 +187,7 @@ def step3_frequency(cache: dict, interactive: bool = True) -> None:
     )
 
     print("\n" + "=" * 60)
-    print("ETAPA 3 – FREQUÊNCIA DE AMINOÁCIDOS")
+    print("ETAPA 3 - FREQUENCIA DE AMINOACIDOS")
     print("=" * 60 + "\n")
 
     freq_csv = ANALYSIS_PATH / "amino_acid_frequencies_per_structure.csv"
@@ -192,7 +197,7 @@ def step3_frequency(cache: dict, interactive: bool = True) -> None:
         date_str = datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M")
         print(f"  Resultados existentes encontrados (gerados em {date_str}).")
         if interactive:
-            if not _ask_rerun("análise de frequência"):
+            if not _ask_rerun("analise de frequencia"):
                 print("  Carregando resultados anteriores...")
                 global_txt = ANALYSIS_PATH / "amino_acid_frequencies_global.txt"
                 global_counter: Counter = Counter()
@@ -222,208 +227,293 @@ def step3_frequency(cache: dict, interactive: bool = True) -> None:
     cache["per_structure"] = per_structure
 
 
-def step4_helix_analysis(cache: dict, interactive: bool = True) -> None:
-    """Etapa 4: Análise avançada de hélices com DSSP."""
-    import pandas as pd
-    from cath_analysis.helix_analysis import run_helix_analysis
+def step4_helix_analysis(cache: dict, interactive: bool = True, use_s40: bool = False) -> None:
+    """Etapa 4: Passo DSSP unificado (coleta dados para etapas 4, 5 e 6 de uma vez)."""
+    from cath_analysis.unified_dssp import run_unified_dssp
+    from cath_analysis.config import PROCESS_WORKERS
 
     print("\n" + "=" * 60)
-    print("ETAPA 4 – ANÁLISE AVANÇADA DE HÉLICES")
+    print("ETAPA 4 - ANALISE DSSP UNIFICADA (etapas 4+5+6 em uma passagem)")
     print("=" * 60 + "\n")
 
-    report_file = ANALYSIS_PATH / "helix_analysis_comprehensive_report.txt"
+    report_file = ANALYSIS_PATH / "unified_report.txt"
     if report_file.exists():
         from datetime import datetime
         date_str = datetime.fromtimestamp(report_file.stat().st_mtime).strftime("%Y-%m-%d %H:%M")
         print(f"  Resultados existentes encontrados (gerados em {date_str}).")
         if interactive:
-            if not _ask_rerun("análise de hélices (DSSP)"):
-                print("  Carregando resultados anteriores...")
-                dssp_results: dict = {}
-                prop_csv = ANALYSIS_PATH / "helix_propensities.csv"
-                pos_csv = ANALYSIS_PATH / "helix_positions.csv"
-                if prop_csv.exists():
-                    dssp_results["propensity_df"] = pd.read_csv(prop_csv)
-                if pos_csv.exists():
-                    dssp_results["positions_df"] = pd.read_csv(pos_csv)
-                dssp_results["helix_lengths"] = []
-                dssp_results["heptad_data"] = None
-                cache["dssp_results"] = dssp_results
+            if not _ask_rerun("analise DSSP unificada"):
+                print("  Carregando resultados anteriores dos CSVs...")
+                _load_unified_results(cache)
                 return
         else:
             print("  [INFO] Use --force-download para re-executar.")
-            cache["dssp_results"] = {}
+            _load_unified_results(cache)
             return
 
-    dssp_results = run_helix_analysis()
-    cache["dssp_results"] = dssp_results
+    dssp_dir = get_dssp_dir(use_s40)
+    results = run_unified_dssp(dssp_dir, ANALYSIS_PATH, PROCESS_WORKERS)
+    cache.update(results)
 
 
-def step5_helix_types(cache: dict, interactive: bool = True) -> None:
-    """Etapa 5: Classificação de tipos de hélices (H/G/I)."""
+def _load_unified_results(cache: dict) -> None:
+    """Carrega resultados do passo unificado dos arquivos salvos."""
     import pandas as pd
-    from cath_analysis.helix_types import run_helix_type_analysis
+    import pickle
 
+    def _try_csv(name: str):
+        p = ANALYSIS_PATH / name
+        return pd.read_csv(p) if p.exists() else None
+
+    cache["propensity_df"]   = _try_csv("helix_propensities.csv")
+    cache["positions_df"]    = _try_csv("helix_positions.csv")
+    cache["composition_df"]  = _try_csv("helix_type_composition.csv")
+    cache["top_residues_df"] = _try_csv("helix_type_top_residues.csv")
+    cache["stat_df"]         = _try_csv("helix_type_statistical_comparison.csv")
+
+    pkl = ANALYSIS_PATH / "evo_data.pkl"
+    if pkl.exists():
+        with open(pkl, "rb") as f:
+            cache["evo_data"] = pickle.load(f)
+
+
+def step5_helix_types(cache: dict, interactive: bool = True, use_s40: bool = False) -> None:
+    """Etapa 5: No passo unificado, dados ja coletados na etapa 4."""
     print("\n" + "=" * 60)
-    print("ETAPA 5 – TIPOS DE HÉLICES")
+    print("ETAPA 5 - TIPOS DE HELICES (dados do passo unificado)")
     print("=" * 60 + "\n")
 
-    report_file = ANALYSIS_PATH / "helix_types_comprehensive_report.txt"
-    if report_file.exists():
-        from datetime import datetime
-        date_str = datetime.fromtimestamp(report_file.stat().st_mtime).strftime("%Y-%m-%d %H:%M")
-        print(f"  Resultados existentes encontrados (gerados em {date_str}).")
-        if interactive:
-            if not _ask_rerun("classificação de tipos de hélice (DSSP)"):
-                print("  Carregando resultados anteriores...")
-                helix_type_results: dict = {}
-                comp_csv = ANALYSIS_PATH / "helix_type_composition.csv"
-                top_csv = ANALYSIS_PATH / "helix_type_top_residues.csv"
-                stat_csv = ANALYSIS_PATH / "helix_type_statistical_comparison.csv"
-                if comp_csv.exists():
-                    helix_type_results["composition_df"] = pd.read_csv(comp_csv)
-                if top_csv.exists():
-                    helix_type_results["comparison_df"] = pd.read_csv(top_csv)
-                helix_type_results["stat_df"] = pd.read_csv(stat_csv) if stat_csv.exists() else pd.DataFrame()
-                helix_type_results["helix_counts"] = {}
-                helix_type_results["helix_lengths"] = {}
-                cache["helix_type_results"] = helix_type_results
-                return
-        else:
-            print("  [INFO] Use --force-download para re-executar.")
-            cache["helix_type_results"] = {}
-            return
+    if cache.get("composition_df") is not None:
+        print("  Dados de tipos de helices ja disponiveis (coletados na etapa 4).")
+        return
 
-    helix_type_results = run_helix_type_analysis()
-    cache["helix_type_results"] = helix_type_results
+    # Se etapa 4 foi pulada, tenta carregar dos CSVs
+    _load_unified_results(cache)
+    if cache.get("composition_df") is not None:
+        print("  Dados carregados dos CSVs existentes.")
+    else:
+        print("  [AVISO] Dados nao encontrados. Execute a etapa 4 primeiro.")
 
 
-def step6_evolutionary(cache: dict) -> None:
-    """Etapa 6: Coleta de dados evolutivos em um único passo DSSP."""
-    from cath_analysis.evolutionary_analysis import collect_evolutionary_data
-
+def step6_evolutionary(cache: dict, use_s40: bool = False) -> None:
+    """Etapa 6: No passo unificado, dados ja coletados na etapa 4."""
     print("\n" + "=" * 60)
-    print("ETAPA 6 – ANÁLISE EVOLUTIVA DE HÉLICES")
+    print("ETAPA 6 - ANALISE EVOLUTIVA (dados do passo unificado)")
     print("=" * 60 + "\n")
 
-    evo_data = collect_evolutionary_data(STRUCTURES_CLEAN_PATH)
-    cache["evo_data"] = evo_data
+    if cache.get("evo_data") is not None:
+        evo = cache["evo_data"]
+        print(f"  Estruturas processadas: {len(evo.get('helix_content_per_structure', [])):,}")
+        print(f"  Helices alpha (>=4 res): {len(evo.get('helix_sequences', [])):,}")
+        print(f"  Pares de transicao:     {sum(evo.get('transitions', {}).values()):,}")
+        return
 
-    n_helices = len(evo_data.get("helix_sequences", []))
-    n_structs = len(evo_data.get("helix_content_per_structure", []))
-    print(f"  Estruturas processadas: {n_structs:,}")
-    print(f"  Hélices alpha (≥4 res): {n_helices:,}")
-    print(f"  Pares de transição:     {sum(evo_data['transitions'].values()):,}")
+    _load_unified_results(cache)
+    if cache.get("evo_data") is not None:
+        print("  Dados evolutivos carregados do pickle.")
+    else:
+        print("  [AVISO] evo_data.pkl nao encontrado. Execute a etapa 4 primeiro.")
 
 
-# ── Execução de gráficos ──────────────────────────────────────────────────────
+def step_filter_s40() -> None:
+    """Filtra estruturas limpas para o subconjunto nao-redundante S40."""
+    from cath_analysis.s40_filter import run_s40_filter
+
+    print("\n" + "=" * 60)
+    print("FILTRO S40 - SUBCONJUNTO NAO-REDUNDANTE")
+    print("=" * 60 + "\n")
+
+    s40_dir = run_s40_filter(BASE_PATH, STRUCTURES_CLEAN_PATH)
+    count = sum(1 for p in s40_dir.glob("*.pdb") if not p.name.startswith("._"))
+    print(f"\n  Pronto. {count:,} estruturas disponiveis em {s40_dir}")
+    print(f"  Use --steps 4 5 6 --use-s40 para analisar apenas estas estruturas.")
+
+
+# ── Execucao de graficos ──────────────────────────────────────────────────────
 
 def run_plots(selected_ids: list, cache: dict, analysis_path: Path) -> None:
-    """Despacha cada plot_id para a função de plotagem correspondente.
+    """Despacha cada plot_id para a funcao de plotagem correspondente.
+
+    Suporta tanto o cache novo (flat: propensity_df, composition_df, evo_data)
+    quanto o cache antigo (dssp_results, helix_type_results) para compatibilidade.
 
     Args:
         selected_ids: Lista de plot_ids (strings) a plotar.
-        cache: Dicionário com dados acumulados pelas etapas.
-        analysis_path: Diretório de saída para os gráficos.
+        cache: Dicionario com dados acumulados pelas etapas.
+        analysis_path: Diretorio de saida para os graficos.
     """
+    import pandas as pd
     from cath_analysis import plotting as P
     from cath_analysis import evolutionary_analysis as E
 
     analysis_path.mkdir(parents=True, exist_ok=True)
 
+    # Suporte ao cache antigo (dssp_results / helix_type_results) e ao novo (flat)
     evo_data: dict = cache.get("evo_data", {})
-    dssp_results: dict = cache.get("dssp_results") or {}
-    helix_type_results: dict = cache.get("helix_type_results") or {}
     global_counter = cache.get("global_counter")
     per_structure: dict = cache.get("per_structure") or {}
+
+    # Propensidade: novo flat cache ou antigo dssp_results
+    def _get_propensity_df():
+        if cache.get("propensity_df") is not None:
+            return cache["propensity_df"]
+        dssp = cache.get("dssp_results") or {}
+        return dssp.get("propensity_df")
+
+    def _get_positions_df():
+        if cache.get("positions_df") is not None:
+            return cache["positions_df"]
+        dssp = cache.get("dssp_results") or {}
+        return dssp.get("positions_df")
+
+    def _get_helix_lengths():
+        # Tenta cache flat, depois dssp_results, depois CSV
+        if cache.get("helix_lengths"):
+            return cache["helix_lengths"]
+        dssp = cache.get("dssp_results") or {}
+        lengths = dssp.get("helix_lengths")
+        if lengths:
+            return lengths
+        csv_path = analysis_path / "helix_lengths.csv"
+        if csv_path.exists():
+            df = pd.read_csv(csv_path)
+            return df["Length"].tolist() if "Length" in df.columns else []
+        return None
+
+    def _get_heptad():
+        dssp = cache.get("dssp_results") or {}
+        heptad = dssp.get("heptad_data")
+        if heptad is None and evo_data:
+            from cath_analysis.config import HYDROPHOBIC_AA
+            heptad_dist = evo_data.get("heptad_aa_distribution", {})
+            heptad = {}
+            for pos in range(7):
+                cnts = heptad_dist.get(pos, {})
+                total = sum(cnts.values())
+                hydro = sum(v for aa, v in cnts.items() if aa in HYDROPHOBIC_AA)
+                heptad[pos] = {"hydrophobic": hydro, "total": total}
+        return heptad
+
+    def _get_composition_df():
+        if cache.get("composition_df") is not None:
+            return cache["composition_df"]
+        ht = cache.get("helix_type_results") or {}
+        return ht.get("composition_df")
+
+    def _get_top_residues_df():
+        if cache.get("top_residues_df") is not None:
+            return cache["top_residues_df"]
+        ht = cache.get("helix_type_results") or {}
+        return ht.get("comparison_df")
+
+    def _get_stat_df():
+        if cache.get("stat_df") is not None:
+            return cache["stat_df"]
+        ht = cache.get("helix_type_results") or {}
+        return ht.get("stat_df")
+
+    def _get_helix_counts():
+        # Deriva de composition_df ou helix_type_results
+        comp_df = _get_composition_df()
+        if comp_df is not None and not comp_df.empty:
+            return comp_df.groupby("Helix_Type")["Count"].sum().to_dict()
+        ht = cache.get("helix_type_results") or {}
+        return ht.get("helix_counts")
+
+    def _get_lengths_by_type():
+        if evo_data:
+            lbt = evo_data.get("helix_lengths_by_type")
+            if lbt:
+                return lbt
+        ht = cache.get("helix_type_results") or {}
+        lbt = ht.get("helix_lengths")
+        if lbt:
+            return lbt
+        # Tenta carregar do CSV
+        csv_path = analysis_path / "helix_lengths_by_type.csv"
+        if csv_path.exists():
+            df = pd.read_csv(csv_path)
+            result = {}
+            for ht_type, grp in df.groupby("Helix_Type"):
+                result[ht_type] = grp["Length"].tolist()
+            return result
+        return None
 
     for pid in selected_ids:
         print(f"\n-> Plotando: {pid}")
         try:
-            # ── Grupo 1: Análise básica ──────────────────────────────────────
+            # ── Grupo 1: Analise basica ───────────────────────────────────────
             if pid == "helix_propensities":
-                df = dssp_results.get("propensity_df") if dssp_results else None
+                df = _get_propensity_df()
                 if df is not None:
                     P.plot_helix_propensities(df, analysis_path)
                 else:
-                    print("  [AVISO] Dados de propensão não disponíveis. Execute a etapa 4.")
+                    print("  [AVISO] Dados de propensao nao disponiveis. Execute a etapa 4.")
 
             elif pid == "helix_positions":
-                df = dssp_results.get("positions_df") if dssp_results else None
+                df = _get_positions_df()
                 if df is not None:
                     P.plot_helix_positions(df, analysis_path)
                 else:
-                    print("  [AVISO] Dados de posições não disponíveis. Execute a etapa 4.")
+                    print("  [AVISO] Dados de posicoes nao disponiveis. Execute a etapa 4.")
 
             elif pid == "helix_lengths":
-                lengths = dssp_results.get("helix_lengths") if dssp_results else None
+                lengths = _get_helix_lengths()
                 if lengths:
                     P.plot_helix_length_distribution(lengths, analysis_path)
                 else:
-                    print("  [AVISO] Dados de comprimentos não disponíveis. Execute a etapa 4.")
+                    print("  [AVISO] Dados de comprimentos nao disponiveis. Execute a etapa 4.")
 
             elif pid == "heptad_pattern":
-                heptad = dssp_results.get("heptad_data") if dssp_results else None
-                if heptad is None and evo_data:
-                    # Converte heptad_aa_distribution para o formato esperado
-                    from cath_analysis.config import HYDROPHOBIC_AA
-                    heptad_dist = evo_data.get("heptad_aa_distribution", {})
-                    heptad = {}
-                    for pos in range(7):
-                        cnts = heptad_dist.get(pos, {})
-                        total = sum(cnts.values())
-                        hydro = sum(v for aa, v in cnts.items() if aa in HYDROPHOBIC_AA)
-                        heptad[pos] = {"hydrophobic": hydro, "total": total}
+                heptad = _get_heptad()
                 if heptad:
                     P.plot_hydrophobic_heptad(heptad, analysis_path)
                 else:
-                    print("  [AVISO] Dados de heptad não disponíveis. Execute a etapa 4 ou 6.")
+                    print("  [AVISO] Dados de heptad nao disponiveis. Execute a etapa 4.")
 
-            # ── Grupo 2: Tipos de hélices ────────────────────────────────────
+            # ── Grupo 2: Tipos de helices ─────────────────────────────────────
             elif pid == "helix_type_distribution":
-                counts = helix_type_results.get("helix_counts") if helix_type_results else None
+                counts = _get_helix_counts()
                 if counts:
                     P.plot_helix_type_distribution(counts, analysis_path)
                 else:
-                    print("  [AVISO] Dados de tipos não disponíveis. Execute a etapa 5.")
+                    print("  [AVISO] Dados de tipos nao disponiveis. Execute a etapa 4.")
 
             elif pid == "helix_type_composition":
-                df = helix_type_results.get("composition_df") if helix_type_results else None
+                df = _get_composition_df()
                 if df is not None:
                     P.plot_helix_type_composition(df, analysis_path)
                 else:
-                    print("  [AVISO] Dados de composição por tipo não disponíveis. Execute a etapa 5.")
+                    print("  [AVISO] Dados de composicao por tipo nao disponiveis. Execute a etapa 4.")
 
             elif pid == "helix_type_top_amino_acids":
-                df = helix_type_results.get("comparison_df") if helix_type_results else None
+                df = _get_top_residues_df()
                 if df is not None:
                     P.plot_top_amino_acids_by_type(df, analysis_path)
                 else:
-                    print("  [AVISO] Dados de comparação não disponíveis. Execute a etapa 5.")
+                    print("  [AVISO] Dados de comparacao nao disponiveis. Execute a etapa 4.")
 
             elif pid == "helix_length_by_type":
-                lengths_by_type = helix_type_results.get("helix_lengths") if helix_type_results else None
-                if lengths_by_type is None and evo_data:
-                    lengths_by_type = evo_data.get("helix_lengths_by_type")
+                lengths_by_type = _get_lengths_by_type()
                 if lengths_by_type:
                     P.plot_helix_length_comparison(lengths_by_type, analysis_path)
                 else:
-                    print("  [AVISO] Dados de comprimento por tipo não disponíveis. Execute a etapa 5 ou 6.")
+                    print("  [AVISO] Dados de comprimento por tipo nao disponiveis. Execute a etapa 4.")
 
             elif pid == "helix_type_statistical_comparison":
-                df = helix_type_results.get("stat_df") if helix_type_results else None
+                df = _get_stat_df()
                 if df is not None:
                     P.plot_statistical_differences(df, analysis_path)
                 else:
-                    print("  [AVISO] Dados estatísticos não disponíveis. Execute a etapa 5.")
+                    print("  [AVISO] Dados estatisticos nao disponiveis. Execute a etapa 4.")
 
-            # ── Grupo 3: Restrições estruturais ─────────────────────────────
+            # ── Grupo 3: Restricoes estruturais ──────────────────────────────
             elif pid == "helical_wheel_average":
                 seqs = evo_data.get("helix_sequences") if evo_data else None
                 if seqs:
                     P.plot_helical_wheel_average(seqs, analysis_path)
                 else:
-                    print("  [AVISO] Dados evolutivos não disponíveis. Execute a etapa 6.")
+                    print("  [AVISO] Dados evolutivos nao disponiveis. Execute a etapa 4.")
 
             elif pid == "hydrophobic_moment_distribution":
                 seqs = evo_data.get("helix_sequences") if evo_data else None
@@ -434,7 +524,7 @@ def run_plots(selected_ids: list, cache: dict, analysis_path: Path) -> None:
                     else:
                         print("  [AVISO] Nenhum momento calculado.")
                 else:
-                    print("  [AVISO] Dados evolutivos não disponíveis. Execute a etapa 6.")
+                    print("  [AVISO] Dados evolutivos nao disponiveis. Execute a etapa 4.")
 
             elif pid == "ncap_ccap_preferences":
                 ncap_pos = evo_data.get("ncap_position") if evo_data else None
@@ -442,31 +532,38 @@ def run_plots(selected_ids: list, cache: dict, analysis_path: Path) -> None:
                 if ncap_pos and ccap_pos:
                     P.plot_ncap_ccap(ncap_pos, ccap_pos, analysis_path)
                 else:
-                    print("  [AVISO] Dados de N-cap/C-cap não disponíveis. Execute a etapa 6.")
+                    print("  [AVISO] Dados de N-cap/C-cap nao disponiveis. Execute a etapa 4.")
 
-            # ── Grupo 4: Composição e variabilidade ──────────────────────────
+            # ── Grupo 4: Composicao e variabilidade ───────────────────────────
             elif pid == "pca_aa_composition":
-                ps = per_structure or (evo_data.get("per_structure") if evo_data else None)
+                # Usa per_structure do cache ou reconstroi de per_helix_data
+                ps = per_structure
+                if not ps and evo_data:
+                    ps = evo_data.get("per_structure") or {}
+                if not ps and evo_data:
+                    # Reconstroi de per_helix_data como proxy
+                    from collections import Counter as _Counter
+                    per_helix = evo_data.get("per_helix_data", [])
+                    ps = {str(i): dict(item["aa_counts"]) for i, item in enumerate(per_helix)}
                 if ps:
                     P.plot_pca_composition(ps, analysis_path)
                 else:
-                    print("  [AVISO] Dados por estrutura não disponíveis. Execute a etapa 3.")
+                    print("  [AVISO] Dados por estrutura nao disponiveis. Execute a etapa 3.")
 
             elif pid == "helix_content_distribution":
                 contents = evo_data.get("helix_content_per_structure") if evo_data else None
                 if contents:
                     P.plot_helix_content_distribution(contents, analysis_path)
                 else:
-                    print("  [AVISO] Dados de conteúdo helicoidal não disponíveis. Execute a etapa 6.")
+                    print("  [AVISO] Dados de conteudo helicoidal nao disponiveis. Execute a etapa 4.")
 
             elif pid == "aa_cooccurrence":
                 seqs = evo_data.get("helix_sequences") if evo_data else None
                 if seqs:
-                    import pandas as pd
                     cooc_df = E.compute_aa_cooccurrence(seqs)
                     P.plot_aa_cooccurrence(cooc_df, analysis_path)
                 else:
-                    print("  [AVISO] Dados evolutivos não disponíveis. Execute a etapa 6.")
+                    print("  [AVISO] Dados evolutivos nao disponiveis. Execute a etapa 4.")
 
             elif pid == "helix_length_vs_composition":
                 per_helix = evo_data.get("per_helix_data") if evo_data else None
@@ -474,26 +571,31 @@ def run_plots(selected_ids: list, cache: dict, analysis_path: Path) -> None:
                     length_df = E.compute_helix_length_composition(per_helix)
                     P.plot_helix_length_vs_composition(length_df, analysis_path)
                 else:
-                    print("  [AVISO] Dados por hélice não disponíveis. Execute a etapa 6.")
+                    # Tenta carregar do CSV
+                    csv_path = analysis_path / "helix_length_vs_composition.csv"
+                    if csv_path.exists():
+                        length_df = pd.read_csv(csv_path)
+                        P.plot_helix_length_vs_composition(length_df, analysis_path)
+                    else:
+                        print("  [AVISO] Dados por helice nao disponiveis. Execute a etapa 4.")
 
-            # ── Grupo 5: Transições e história ──────────────────────────────
+            # ── Grupo 5: Transicoes e historia ───────────────────────────────
             elif pid == "helix_transition_matrix":
                 trans = evo_data.get("transitions") if evo_data else None
                 if trans is None:
-                    trans = helix_type_results.get("transitions") if helix_type_results else None
+                    ht = cache.get("helix_type_results") or {}
+                    trans = ht.get("transitions")
                 if trans:
                     P.plot_helix_transition_matrix(trans, analysis_path)
                 else:
-                    print("  [AVISO] Dados de transição não disponíveis. Execute a etapa 5 ou 6.")
+                    print("  [AVISO] Dados de transicao nao disponiveis. Execute a etapa 4.")
 
             elif pid == "g_ratio_by_length":
-                lbt = evo_data.get("helix_lengths_by_type") if evo_data else None
-                if lbt is None:
-                    lbt = helix_type_results.get("helix_lengths") if helix_type_results else None
+                lbt = _get_lengths_by_type()
                 if lbt:
                     P.plot_g_ratio_by_length(lbt, analysis_path)
                 else:
-                    print("  [AVISO] Dados de comprimento por tipo não disponíveis. Execute a etapa 5 ou 6.")
+                    print("  [AVISO] Dados de comprimento por tipo nao disponiveis. Execute a etapa 4.")
 
             elif pid == "shannon_entropy_heptad":
                 heptad_dist = evo_data.get("heptad_aa_distribution") if evo_data else None
@@ -501,15 +603,24 @@ def run_plots(selected_ids: list, cache: dict, analysis_path: Path) -> None:
                     entropy_df = E.compute_shannon_entropy_heptad(heptad_dist)
                     P.plot_shannon_entropy_heptad(entropy_df, analysis_path)
                 else:
-                    print("  [AVISO] Dados de heptad não disponíveis. Execute a etapa 6.")
+                    # Tenta carregar do CSV
+                    csv_path = analysis_path / "shannon_entropy_heptad.csv"
+                    if csv_path.exists():
+                        entropy_df = pd.read_csv(csv_path)
+                        P.plot_shannon_entropy_heptad(entropy_df, analysis_path)
+                    else:
+                        print("  [AVISO] Dados de heptad nao disponiveis. Execute a etapa 4.")
 
-            # ── Grupo 6: Viés do código genético ────────────────────────────
+            # ── Grupo 6: Vies do codigo genetico ─────────────────────────────
             elif pid == "codon_degeneracy_vs_propensity":
-                if global_counter and evo_data:
+                # Tenta carregar do CSV salvo pelo passo unificado
+                csv_path = analysis_path / "codon_degeneracy.csv"
+                if csv_path.exists():
+                    codon_df = pd.read_csv(csv_path)
+                    P.plot_codon_degeneracy_vs_propensity(codon_df, analysis_path)
+                elif global_counter and evo_data:
                     from collections import Counter
-                    # Reconstrói helix_residues a partir das sequências evolutivas
                     seqs = evo_data.get("helix_sequences", [])
-                    # Mapeia 1-letra → 3-letras
                     _one_to_three = {
                         "A": "ALA", "R": "ARG", "N": "ASN", "D": "ASP", "C": "CYS",
                         "Q": "GLN", "E": "GLU", "G": "GLY", "H": "HIS", "I": "ILE",
@@ -525,15 +636,19 @@ def run_plots(selected_ids: list, cache: dict, analysis_path: Path) -> None:
                     codon_df = E.compute_codon_degeneracy_vs_propensity(helix_residues, global_counter)
                     P.plot_codon_degeneracy_vs_propensity(codon_df, analysis_path)
                 else:
-                    print("  [AVISO] Dados não disponíveis. Execute as etapas 3 e 6.")
+                    print("  [AVISO] Dados nao disponiveis. Execute a etapa 4.")
 
             elif pid == "proteome_comparison":
-                gc = global_counter
-                if gc:
-                    prot_df = E.compute_proteome_comparison(gc)
+                # Tenta carregar do CSV salvo pelo passo unificado
+                csv_path = analysis_path / "proteome_comparison.csv"
+                if csv_path.exists():
+                    prot_df = pd.read_csv(csv_path)
+                    P.plot_proteome_comparison(prot_df, analysis_path)
+                elif global_counter:
+                    prot_df = E.compute_proteome_comparison(global_counter)
                     P.plot_proteome_comparison(prot_df, analysis_path)
                 else:
-                    print("  [AVISO] Dados globais não disponíveis. Execute a etapa 3.")
+                    print("  [AVISO] Dados globais nao disponiveis. Execute a etapa 3 ou 4.")
 
             else:
                 print(f"  [AVISO] plot_id desconhecido: {pid}")
@@ -573,16 +688,16 @@ def _resolve_plot_preselection(tokens: list[str]) -> set[str]:
             if 0 <= g_idx < len(group_list):
                 selected.update(groups[group_list[g_idx]])
             else:
-                print(f"  [AVISO] Grupo inválido: {token} (use g1–g{len(group_list)})")
+                print(f"  [AVISO] Grupo invalido: {token} (use g1-g{len(group_list)})")
         elif token in PLOT_CATALOG:
             selected.add(token)
         else:
-            print(f"  [AVISO] Plot desconhecido: '{token}' (use --list-plots para ver opções)")
+            print(f"  [AVISO] Plot desconhecido: '{token}' (use --list-plots para ver opcoes)")
     return selected
 
 
 def _list_plots() -> None:
-    """Imprime o catálogo completo de gráficos disponíveis."""
+    """Imprime o catalogo completo de graficos disponiveis."""
     from cath_analysis.menu import PLOT_CATALOG
     current_group = None
     print()
@@ -590,7 +705,7 @@ def _list_plots() -> None:
         if info["grupo"] != current_group:
             current_group = info["grupo"]
             print(f"\n  {current_group}")
-            print("  " + "─" * 56)
+            print("  " + "-" * 56)
         tags = []
         if info["requer_dssp"]:
             tags.append("DSSP")
@@ -617,19 +732,19 @@ def main() -> None:
         choices=list(ALL_STEPS),
         default=None,
         metavar="N",
-        help="Etapas a executar (1-6). Padrão: todas.",
+        help="Etapas a executar (1-6). Padrao: todas.",
     )
     parser.add_argument(
         "--explore",
         action="store_true",
         default=False,
-        help="Atalho para --steps 3 4 5 6: pula download e limpeza, vai direto à análise.",
+        help="Atalho para --steps 3 4 5 6: pula download e limpeza, vai direto a analise.",
     )
     parser.add_argument(
         "--force-download",
         action="store_true",
         default=False,
-        help="Re-baixa e reprocessa mesmo que os dados já existam (sem perguntar).",
+        help="Re-baixa e reprocessa mesmo que os dados ja existam (sem perguntar).",
     )
     parser.add_argument(
         "--skip-download",
@@ -641,7 +756,7 @@ def main() -> None:
         "--no-interactive",
         action="store_true",
         default=False,
-        help="Desativa todos os menus interativos (download e gráficos).",
+        help="Desativa todos os menus interativos (download e graficos).",
     )
     parser.add_argument(
         "--plots",
@@ -649,7 +764,7 @@ def main() -> None:
         default=None,
         metavar="GRUPO_OU_ID",
         help=(
-            "Pré-seleciona gráficos no menu. Use 'g1'..'g6' para grupos "
+            "Pre-seleciona graficos no menu. Use 'g1'..'g6' para grupos "
             "ou IDs individuais. Ex: --plots g3 g4 helical_wheel_average"
         ),
     )
@@ -657,7 +772,19 @@ def main() -> None:
         "--list-plots",
         action="store_true",
         default=False,
-        help="Lista todos os gráficos disponíveis e sai.",
+        help="Lista todos os graficos disponiveis e sai.",
+    )
+    parser.add_argument(
+        "--filter-s40",
+        action="store_true",
+        default=False,
+        help="Cria subconjunto nao-redundante S40 antes das analises (executa uma vez).",
+    )
+    parser.add_argument(
+        "--use-s40",
+        action="store_true",
+        default=False,
+        help="Usa apenas estruturas S40 nas etapas DSSP (requer --filter-s40 previa).",
     )
     args = parser.parse_args()
 
@@ -675,16 +802,23 @@ def main() -> None:
     else:
         steps_to_run = sorted(ALL_STEPS.keys())
 
+    s40_suffix = " [S40]" if args.use_s40 else ""
     print("=" * 60)
     print("PIPELINE EVO-HEX")
     print(f"  Base:      {BASE_PATH}")
-    print(f"  Etapas:    {steps_to_run}")
-    print(f"  Interativo: {'Sim' if interactive else 'Não'}")
+    print(f"  Etapas:    {steps_to_run}{s40_suffix}")
+    print(f"  Interativo: {'Sim' if interactive else 'Nao'}")
     if args.force_download:
-        print("  Modo:      força re-download")
+        print("  Modo:      forca re-download")
     elif args.skip_download or args.explore:
-        print("  Modo:      exploração (sem download)")
+        print("  Modo:      exploracao (sem download)")
+    if args.use_s40:
+        print("  Subset:    S40 nao-redundante")
     print("=" * 60)
+
+    # Filtro S40 (antes das etapas, se solicitado)
+    if args.filter_s40:
+        step_filter_s40()
 
     cache: dict = {}
 
@@ -695,7 +829,16 @@ def main() -> None:
             elif step_num == 2:
                 step2_clean(force=args.force_download, interactive=interactive)
             elif step_num in (3, 4, 5):
-                STEPS_WITH_CACHE[step_num](cache, interactive=interactive)
+                STEPS_WITH_CACHE[step_num](
+                    cache,
+                    interactive=interactive,
+                    use_s40=getattr(args, "use_s40", False),
+                )
+            elif step_num == 6:
+                STEPS_WITH_CACHE[step_num](
+                    cache,
+                    use_s40=getattr(args, "use_s40", False),
+                )
             else:
                 STEPS_WITH_CACHE[step_num](cache)
         except Exception:  # noqa: BLE001
@@ -703,40 +846,45 @@ def main() -> None:
             sys.exit(1)
 
     print("\n" + "=" * 60)
-    print("PIPELINE CONCLUÍDO")
+    print("PIPELINE CONCLUIDO")
     print("=" * 60)
 
-    # ── Menu interativo de gráficos ──────────────────────────────────────────
-    has_data = any(k in cache for k in ("global_counter", "dssp_results",
-                                         "helix_type_results", "evo_data"))
+    # ── Menu interativo de graficos ───────────────────────────────────────────
+    has_data = any(
+        k in cache
+        for k in (
+            "global_counter", "dssp_results", "helix_type_results", "evo_data",
+            "propensity_df", "composition_df",
+        )
+    )
 
     if not has_data:
-        print("\n  Nenhum dado de análise em cache. Execute etapas 3-6 para plotar.")
+        print("\n  Nenhum dado de analise em cache. Execute etapas 3-6 para plotar.")
     elif not interactive:
         from cath_analysis.menu import PLOT_CATALOG
         all_ids = list(PLOT_CATALOG.keys())
-        print(f"\nModo não interativo: plotando {len(all_ids)} gráficos...")
+        print(f"\nModo nao interativo: plotando {len(all_ids)} graficos...")
         run_plots(all_ids, cache, ANALYSIS_PATH)
-        print(f"Gráficos salvos em: {ANALYSIS_PATH}")
+        print(f"Graficos salvos em: {ANALYSIS_PATH}")
     else:
         from cath_analysis.menu import select_plots
 
-        # Pré-seleção via --plots
+        # Pre-selecao via --plots
         preselected: set[str] = set()
         if args.plots:
             preselected = _resolve_plot_preselection(args.plots)
             if preselected:
-                print(f"\n  {len(preselected)} gráfico(s) pré-selecionados via --plots.")
+                print(f"\n  {len(preselected)} grafico(s) pre-selecionados via --plots.")
 
-        print("\nAbrindo seletor de gráficos...")
+        print("\nAbrindo seletor de graficos...")
         selected_ids = select_plots(preselected=preselected)
 
         if selected_ids:
-            print(f"\nPlotando {len(selected_ids)} gráfico(s)...")
+            print(f"\nPlotando {len(selected_ids)} grafico(s)...")
             run_plots(selected_ids, cache, ANALYSIS_PATH)
-            print(f"\nGráficos salvos em: {ANALYSIS_PATH}")
+            print(f"\nGraficos salvos em: {ANALYSIS_PATH}")
         else:
-            print("\nNenhum gráfico selecionado.")
+            print("\nNenhum grafico selecionado.")
 
     print("\n" + "=" * 60)
     print("ENCERRADO")
