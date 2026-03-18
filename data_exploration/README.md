@@ -6,7 +6,7 @@
 
 ---
 
-## Abstract (SBBE26 -- Alternative, ~250 words)
+## Abstract (SBBE26, ~250 words)
 
 The evolutionary origin of alpha-helical dominance in modern proteomes remains unresolved.
 We tested whether the amino acid composition of alpha-helices reflects physicochemical
