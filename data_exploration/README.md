@@ -8,28 +8,53 @@
 
 ## Abstract
 
-The alpha-helix is the most abundant secondary structure element in the protein universe,
-yet the mechanistic basis for this dominance remains incompletely understood. We propose
-that the prevalence of alpha-helices reflects a deterministic consequence of prebiotic
-amino acid chemistry rather than a stochastic evolutionary accident. Using a large-scale
-structural bioinformatics analysis of the CATH S40 non-redundant mainly-alpha dataset,
-we quantified amino acid frequencies, propensities, and proteome enrichment specifically
-within helical domains annotated via DSSP across 7,997 structures encompassing 117,665
-helices and 2,368,790 residues. Our findings reveal that the two strongest observed
-helix-forming residues, Alanine (propensity 1.300; proteome enrichment 1.550) and
-Leucine (propensity 1.255; enrichment 1.365), are canonical prebiotic amino acids,
-together accounting for 24.0% of all alpha-helical positions. Conversely, Glycine and
-Proline, also abundant in prebiotic syntheses but structurally incompatible with helical
-geometry, are the most depleted residues in helical regions (enrichment 0.474 and 0.379,
-respectively). This bifurcation within the prebiotic amino acid set is mechanistically
-predicted by first principles, backbone geometry, hydrogen bond geometry, and side-chain
-packing constraints, and constitutes evidence that modern helical composition retains a
-"fossilized" prebiotic signature. We further demonstrate that N-cap and C-cap preferences,
-heptad repeat periodicity, and hydrophobic moment distributions are consistent with
-physically constrained rather than contingently evolved configurations. Taken together,
-these results challenge the paradigm of purely contingent molecular evolution and support
-a model in which the deep architecture of the protein fold space was substantially
-determined before the emergence of LUCA.
+The alpha-helix is the most prevalent secondary structure element across known proteomes,
+yet the determinants of its compositional identity in modern proteins remain poorly
+understood. Two competing interpretive frameworks have been proposed: one in which
+alpha-helical dominance reflects contingent evolutionary outcomes under Darwinian
+selection, and one in which it reflects a physicochemical predisposition rooted in the
+prebiotic amino acid inventory. To evaluate these frameworks quantitatively, we performed
+a large-scale structural bioinformatics analysis of the CATH database (version 4.3),
+which contains 126,178 mainly-alpha (class 1) and 305,361 alpha-beta (class 3) protein
+domains in its full release. Restricting the analysis to class 1 under the S40
+non-redundancy threshold (maximum 40% pairwise sequence identity) reduced the working
+set to 8,056 representative domains, of which 7,997 met crystallographic quality criteria
+(resolution 3.0 angstrom or better, R-factor 0.25 or lower). We applied a unified DSSP
+annotation pipeline to these 7,997 structures, encompassing 117,665 helical segments and
+2,368,790 residues. For each residue and helix type,
+we computed amino acid frequencies, observed helical propensities, proteome enrichment
+ratios against the Swiss-Prot human reference, N-cap and C-cap positional preferences,
+heptad repeat residue distributions with Shannon entropy, per-helix hydrophobic moments,
+first-order Markov transition matrices, and a UMAP projection of the 20-dimensional
+amino acid composition space.
+
+Our results indicate that the two strongest helix-forming residues in the dataset,
+Alanine (observed propensity 1.300; proteome enrichment 1.550) and Leucine (propensity
+1.255; enrichment 1.365), are both canonical prebiotic amino acids, jointly occupying
+24.0% of all alpha-helical positions across 90,263 helical segments. Conversely, Glycine
+and Proline, also abundant in prebiotic syntheses but mechanistically incompatible with
+alpha-helical geometry, show the strongest depletion in helical regions (enrichment 0.474
+and 0.379, respectively). This bifurcation within the prebiotic amino acid set is
+consistent with predictions derived from backbone dihedral constraints and hydrogen bond
+geometry alone. N-cap and C-cap positional preferences, reproduced across all 117,665
+helical termini, are explicable by backbone hydrogen bond satisfaction requirements
+without invoking sequence-level selection. Shannon entropy at all seven heptad repeat
+positions falls within 96.3-96.4% of the theoretical maximum, with Leucine maintaining
+a consistent above-average frequency (10.4-10.6%) across all positions irrespective of
+their structural role. The UMAP projection reveals a continuous compositional manifold
+rather than discrete clusters, with Leucine- and Alanine-dominated helices defining the
+region of highest density.
+
+Taken together, these data suggest that the compositional signature of the alpha-helix
+in modern proteins is substantially consistent with physicochemical constraints operative
+in the prebiotic world, prior to the emergence of a ribosomal translation system. Whether
+this pattern reflects a direct inheritance from early peptide chemistry, a convergent
+outcome of independent physicochemical filtering, or a combination of both remains an open
+question. These findings underscore the importance of revisiting the evolutionary origins
+of primordial protein architectures: understanding how the first folded structures arose,
+and what chemical logic shaped their composition, may be essential for reconstructing the
+molecular events at the origin of life and for interpreting the deep conservation of
+structural motifs across all domains of life.
 
 ---
 
