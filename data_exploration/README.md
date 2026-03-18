@@ -6,6 +6,36 @@
 
 ---
 
+## Abstract (SBBE26 -- Alternative, ~250 words)
+
+The evolutionary origin of alpha-helical dominance in modern proteomes remains unresolved.
+We tested whether the amino acid composition of alpha-helices reflects physicochemical
+constraints predating Darwinian selection. From the CATH database (v4.3; 126,178
+mainly-alpha and 305,361 alpha-beta domains), the S40 threshold (40% identity) yielded 8,056 class 1 representatives, of which 7,997
+passed crystallographic quality criteria (resolution 3.0 angstrom or better, R-factor
+0.25 or lower). A unified DSSP pipeline annotated 117,665 helical segments and 2,368,790
+residues. We computed amino acid propensities, proteome enrichment ratios, N-cap and
+C-cap positional preferences, heptad repeat distributions with Shannon entropy, and a
+UMAP projection of the per-helix composition space.
+
+Alanine and Leucine, both canonical prebiotic amino acids, are the two strongest
+helix-forming residues (propensities 1.300 and 1.255; enrichment 1.550 and 1.365),
+jointly occupying 24.0% of all alpha-helical positions. Glycine and Proline, also
+prebiotically abundant but excluded from helical geometry by backbone constraints, show
+the strongest depletion (enrichment 0.474 and 0.379). N-cap preferences for Asp and Asn,
+reproduced across 117,665 helical termini, are fully explained by hydrogen bond geometry
+without invoking sequence-level selection. Shannon entropy at all seven heptad positions
+reaches 96.3-96.4% of the theoretical maximum, with Leucine showing a reproducible excess
+at every structural role.
+
+These data suggest that modern alpha-helical composition retains a measurable prebiotic
+signature across billions of years of molecular evolution. Understanding the
+physicochemical logic that shaped the earliest protein folds is an open question with
+direct implications for reconstructing the events at the origin of life and interpreting
+structural conservation across all domains of life.
+
+---
+
 ## Abstract
 
 The alpha-helix is the most prevalent secondary structure element across known proteomes,
