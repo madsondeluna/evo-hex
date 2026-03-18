@@ -3,7 +3,7 @@
 **Tentative titles:**
 
 1. Prebiotic Chemistry as Structural Destiny: Alanine and Leucine Bias Encoded in the Alpha-Helical Proteome
-2. Frozen in Fold Space: A Prebiotic Amino Acid Signature Persists Across 8,000 Non-Redundant Alpha-Helical Protein Structures
+2. Frozen in Fold Space: A Prebiotic Amino Acid Signature Persists Across the Alpha-Helical Proteome
 
 ---
 
