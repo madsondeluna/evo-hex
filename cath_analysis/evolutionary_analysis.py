@@ -109,11 +109,11 @@ def compute_helix_length_composition(per_helix_data: list) -> pd.DataFrame:
         DataFrame com colunas: Bin, Group, Frequency.
     """
     groups = {
-        "Hidrofóbico": {"ALA", "VAL", "ILE", "LEU", "MET", "PHE", "TRP"},
-        "Polar":        {"SER", "THR", "CYS", "TYR", "ASN", "GLN"},
-        "Carregado+":   {"LYS", "ARG", "HIS"},
-        "Carregado-":   {"ASP", "GLU"},
-        "Especial":     {"GLY", "PRO"},
+        "Hydrophobic": {"ALA", "VAL", "ILE", "LEU", "MET", "PHE", "TRP"},
+        "Polar":       {"SER", "THR", "CYS", "TYR", "ASN", "GLN"},
+        "Charged+":    {"LYS", "ARG", "HIS"},
+        "Charged-":    {"ASP", "GLU"},
+        "Special":     {"GLY", "PRO"},
     }
 
     groups_1 = {
@@ -122,9 +122,9 @@ def compute_helix_length_composition(per_helix_data: list) -> pd.DataFrame:
     }
 
     bins = {
-        "Curta (4-9)":    [],
-        "Média (10-19)":  [],
-        "Longa (≥20)":    [],
+        "Short (4–9)":    [],
+        "Medium (10–19)": [],
+        "Long (≥20)":     [],
     }
 
     for item in per_helix_data:
@@ -134,11 +134,11 @@ def compute_helix_length_composition(per_helix_data: list) -> pd.DataFrame:
         if total == 0:
             continue
         if 4 <= length <= 9:
-            bin_key = "Curta (4-9)"
+            bin_key = "Short (4–9)"
         elif 10 <= length <= 19:
-            bin_key = "Média (10-19)"
+            bin_key = "Medium (10–19)"
         else:
-            bin_key = "Longa (≥20)"
+            bin_key = "Long (≥20)"
         bins[bin_key].append((counts, total))
 
     rows = []
