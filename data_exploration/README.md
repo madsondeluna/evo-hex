@@ -1,5 +1,10 @@
 # The Alpha-Helix as a Primordial Fossil: Prebiotic Amino Acid Bias and the Deterministic Rise of Alpha-Helical Architecture
 
+**Tentative titles:**
+
+1. Prebiotic Chemistry as Structural Destiny: Alanine and Leucine Bias Encoded in the Alpha-Helical Proteome
+2. Frozen in Fold Space: A Prebiotic Amino Acid Signature Persists Across 8,000 Non-Redundant Alpha-Helical Protein Structures
+
 ---
 
 ## Abstract
