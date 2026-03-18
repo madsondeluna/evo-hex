@@ -172,7 +172,7 @@ regional density in the embedding space.
 
 ### Figure 1 — Helix-type distribution
 
-![Helix type distribution](../debug/analysis/helix_type_distribution.png)
+![Helix type distribution](imgs/helix_type_distribution.png)
 
 Of the 1,461 helical segments annotated across 100 structures, 1,146 (78.4%) were
 classified as alpha helices, 281 (19.2%) as 3-10 helices, and 34 (2.3%) as pi helices.
@@ -185,7 +185,7 @@ contingent evolutionary outcome.
 
 ### Figure 2 — Amino acid helix propensity
 
-![Helix propensities](../debug/analysis/helix_propensities.png)
+![Helix propensities](imgs/helix_propensities.png)
 
 | AA | Prebiotic? | Obs. propensity | Chou-Fasman |
 |----|:----------:|----------------:|------------:|
@@ -215,7 +215,7 @@ the outset.
 
 ### Figure 3 — Amino acid composition by helix type (heatmap, z-score)
 
-![Helix type composition heatmap](../debug/analysis/helix_type_composition_heatmap.png)
+![Helix type composition heatmap](imgs/helix_type_composition_heatmap.png)
 
 Z-score normalized residue frequencies per helix type reveal a clear compositional
 separation between alpha and 3-10 helices. Isoleucine, Leucine, and Alanine show
@@ -230,7 +230,7 @@ that the alpha-helix signature is specifically aligned with the prebiotic amino 
 
 ### Figure 4 — Top amino acids by helix type
 
-![Top amino acids by helix type](../debug/analysis/helix_type_top_amino_acids.png)
+![Top amino acids by helix type](imgs/helix_type_top_amino_acids.png)
 
 In alpha helices, Leucine and Alanine together account for 23.3% of all residues
 (13.5% and 9.8%, respectively). In 3-10 helices, the same two residues account for
@@ -245,7 +245,7 @@ most strongly imprinted by prebiotic amino acid bias.
 
 ### Figure 5 — Alpha vs. 3-10 statistical comparison
 
-![Helix type statistical comparison](../debug/analysis/helix_type_statistical_comparison.png)
+![Helix type statistical comparison](imgs/helix_type_statistical_comparison.png)
 
 | AA | Prebiotic? | Alpha (%) | 3-10 (%) | Delta |
 |----|:----------:|----------:|---------:|------:|
@@ -269,7 +269,7 @@ division is mechanistically dictated — not evolved.
 
 ### Figure 6 — Helix positions along the polypeptide chain
 
-![Helix positions](../debug/analysis/helix_positions.png)
+![Helix positions](imgs/helix_positions.png)
 
 Alpha helices are distributed across the full length of polypeptide chains with no
 strong positional bias, reflecting the structural diversity of the mainly-alpha CATH
@@ -282,7 +282,7 @@ compositional analyses, though it does not directly test the prebiotic bias hypo
 
 ### Figure 7 — Helix length distribution
 
-![Helix lengths](../debug/analysis/helix_lengths.png)
+![Helix lengths](imgs/helix_lengths.png)
 
 Alpha helices exhibit a right-skewed length distribution with a mode in the 7–12
 residue range and a long tail extending beyond 40 residues. The median alpha-helix
@@ -296,7 +296,7 @@ in the structural core.
 
 ### Figure 8 — Helix length by type
 
-![Helix length by type](../debug/analysis/helix_length_by_type.png)
+![Helix length by type](imgs/helix_length_by_type.png)
 
 The length hierarchy (alpha > pi > 3-10) is confirmed by the boxplot distribution.
 The substantially larger variance in alpha-helix length reflects the diversity of
@@ -309,7 +309,7 @@ structural characterization.
 
 ### Figure 9 — Helical wheel
 
-![Helical wheel](../debug/analysis/helical_wheel_average.png)
+![Helical wheel](imgs/helical_wheel_average.png)
 
 The average amino acid composition projected onto the helical wheel (100°/residue
 periodicity) reveals a partial hydrophobic sector enrichment in the ~180° arc
@@ -324,7 +324,7 @@ aliphatic residues in the core-facing sector is visible.
 
 ### Figure 10 — Hydrophobic moment distribution
 
-![Hydrophobic moment](../debug/analysis/hydrophobic_moment_distribution.png)
+![Hydrophobic moment](imgs/hydrophobic_moment_distribution.png)
 
 The distribution of Eisenberg hydrophobic moments (μH) across alpha helices shows a
 broad range with a mode near 0.20–0.30 and a tail extending beyond 0.50. The mode
@@ -342,7 +342,7 @@ about the proportion of helices consistent with this ancestral membrane-interact
 
 ### Figure 11 — N-cap and C-cap residue preferences
 
-![N-cap C-cap preferences](../debug/analysis/ncap_ccap_preferences.png)
+![N-cap C-cap preferences](imgs/ncap_ccap_preferences.png)
 
 > N1–N3: first three helical residues after the initiating hydrogen bond; C1–C3: last
 > three residues before the terminal hydrogen bond. All values are z-score normalized
@@ -369,7 +369,7 @@ their side-chain hydrogen bonding capacity.
 
 ### Figure 12 — Heptad repeat residue distribution
 
-![Heptad pattern](../debug/analysis/heptad_pattern.png)
+![Heptad pattern](imgs/heptad_pattern.png)
 
 Residue frequencies at each of the seven heptad positions (a–g) are visualized as a
 treemap, colored by structural role: positions a and d form the hydrophobic core in
@@ -392,7 +392,7 @@ rooted in its prebiotic abundance.
 
 ### Figure 13 — Helical content per structure
 
-![Helix content distribution](../debug/analysis/helix_content_distribution.png)
+![Helix content distribution](imgs/helix_content_distribution.png)
 
 The mean helical content across 100 structures is 57.3%, with a broad distribution
 reflecting the structural diversity within the CATH mainly-alpha class. This figure
@@ -405,7 +405,7 @@ rather than a narrow structural archetype.
 
 ### Figure 14 — Amino acid co-occurrence matrix
 
-![AA co-occurrence](../debug/analysis/aa_cooccurrence.png)
+![AA co-occurrence](imgs/aa_cooccurrence.png)
 
 The z-score normalized co-occurrence matrix reveals which amino acid pairs appear
 together in the same helix more frequently than expected under independence. Notable
@@ -422,7 +422,7 @@ individual propensities.
 
 ### Figure 15 — Amino acid composition by helix length
 
-![Helix length vs composition](../debug/analysis/helix_length_vs_composition.png)
+![Helix length vs composition](imgs/helix_length_vs_composition.png)
 
 | Group | Short (4-9) | Medium (10-19) | Long (≥20) |
 |-------|------------:|---------------:|-----------:|
@@ -450,7 +450,7 @@ whose specific amino acid contributors (Leu, Ile, Ala) are prebiotic.
 
 ### Figure 16 — Residue transition matrix
 
-![Helix transition matrix](../debug/analysis/helix_transition_matrix.png)
+![Helix transition matrix](imgs/helix_transition_matrix.png)
 
 The first-order Markov transition matrix encodes the probability of each amino acid
 being immediately followed by each other amino acid within helical segments. Dominant
@@ -464,7 +464,7 @@ sequence design, but it does not provide direct evidence for the prebiotic bias 
 
 ### Figure 17 — 3-10 helix ratio by alpha-helix length
 
-![G ratio by length](../debug/analysis/g_ratio_by_length.png)
+![G ratio by length](imgs/g_ratio_by_length.png)
 
 The frequency of 3-10 helices adjacent to or flanking alpha helices of different lengths
 shows that shorter alpha helices have proportionally more 3-10 flanking segments, consistent
@@ -476,7 +476,7 @@ composition but is secondary to the main compositional argument.
 
 ### Figure 18 — Shannon entropy at heptad positions
 
-![Shannon entropy heptad](../debug/analysis/shannon_entropy_heptad.png)
+![Shannon entropy heptad](imgs/shannon_entropy_heptad.png)
 
 The scatter visualization makes explicit the near-flat entropy profile across all seven
 heptad positions (range: 4.155–4.181 bits; theoretical maximum: 4.322 bits), with
@@ -492,7 +492,7 @@ modern protein fold space.
 
 ### Figure 19 — Codon degeneracy vs. helix propensity
 
-![Codon degeneracy vs propensity](../debug/analysis/codon_degeneracy_vs_propensity.png)
+![Codon degeneracy vs propensity](imgs/codon_degeneracy_vs_propensity.png)
 
 | AA | Prebiotic? | Codons | Obs. propensity |
 |----|:----------:|-------:|----------------:|
@@ -520,7 +520,7 @@ post-prebiotic residues in a modern structural dataset.
 
 ### Figure 20 — Proteome enrichment
 
-![Proteome comparison](../debug/analysis/proteome_comparison.png)
+![Proteome comparison](imgs/proteome_comparison.png)
 
 | AA | Prebiotic? | Enrichment | log2(enrich.) |
 |----|:----------:|----------:|---------------:|
@@ -551,7 +551,7 @@ constitutes direct quantitative evidence for it.
 > The image below is from the pre-UMAP (PCA) version of this analysis. Re-run
 > cell-p12 after the full pipeline completes to generate `umap_aa_composition.png`.
 
-![UMAP / PCA composition space](../debug/analysis/pca_aa_composition.png)
+![UMAP / PCA composition space](imgs/pca_aa_composition.png)
 
 Each point represents one helix, embedded in two dimensions from a 20-dimensional
 normalized amino acid composition vector after StandardScaler preprocessing. Color
