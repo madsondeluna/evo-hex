@@ -237,6 +237,8 @@ each helix.
 
 ![Helix type distribution](imgs/helix_type_distribution.png)
 
+**Figure 1. Helix-type distribution across the CATH S40 mainly-α dataset.** Treemap showing the proportional composition of helical residues by DSSP-assigned helix type across 7,997 non-redundant mainly-α protein domains. Area is proportional to the fraction of total helical residues in each category: α-helix (H, red; 91.6%), 3-10 helix (G, blue; 6.8%), and π-helix (I, green; 1.6%).
+
 Of the 117,665 helical segments annotated across 7,997 structures, 90,263 (76.7% of
 segments) were classified as α-helices, 23,912 (20.3%) as 3-10 helices, and 3,490
 (3.0%) as π-helices. Because α-helices are substantially longer than 3-10 and π-helices
@@ -253,6 +255,10 @@ inevitability or a contingent evolutionary outcome.
 ### Figure 2 - Amino acid helix propensity
 
 ![Helix propensities](imgs/helix_propensities.png)
+
+**Figure 2. Amino acid helical propensity relative to global frequency and proteome background.** Upper panel: log2-transformed observed helical propensity (blue bars) versus Chou-Fasman theoretical propensity (orange bars) for all 20 standard amino acids, computed from 2,368,790 residues across 7,997 structures. Dashed line at zero indicates neutral propensity (P = 1.0). Lower panel: scatter plot of log2(frequency in helices) versus log2(total frequency across all annotated residues), with residue identity labelled; the dashed diagonal represents equal frequency in helices and globally.
+
+**Table 1. Observed helical propensity and Chou-Fasman theoretical propensity for selected amino acids.** Observed propensity P(a) = f_helix(a) / f_total(a) was computed from 2,368,790 residues across 7,997 non-redundant mainly-α protein domains. Chou-Fasman values are from the original scale (Chou & Fasman, 1974). Prebiotic classification is based on consensus across Miller-Urey, meteoritic, and hydrothermal synthesis datasets. Bold values indicate the two top helix-formers.
 
 | AA | Prebiotic? | Obs. propensity | Chou-Fasman |
 |----|:----------:|----------------:|------------:|
@@ -287,6 +293,8 @@ composition from the outset.
 
 ![Helix type composition heatmap](imgs/helix_type_composition_heatmap.png)
 
+**Figure 3. Z-score normalized amino acid composition by helix type.** Heatmap of per-residue frequency z-scores (row-normalized across helix types) for the 20 standard amino acids (rows) in 3-10 helices (n = 23,912 segments), α-helices (n = 90,263), and π-helices (n = 3,490). Red indicates enrichment relative to the per-residue mean across all three types; blue indicates depletion. Z-score scale shown at right.
+
 As shown in Figure 3, z-score normalized residue frequencies per helix type reveal a
 clear compositional separation between α-helices and 3-10 helices. Leucine and Alanine
 show the highest positive z-scores in the α-helix column (z = +2.70 and +1.91,
@@ -306,6 +314,8 @@ is most specifically aligned with the prebiotic amino acid set.
 
 ![Top amino acids by helix type](imgs/helix_type_top_amino_acids.png)
 
+**Figure 4. Top-10 most frequent amino acids in each helix type.** Horizontal bar charts showing the ten most frequent amino acids (by observed residue frequency) in 3-10 helices (left), α-helices (centre), and π-helices (right). Frequencies are expressed as fractions of all residues within the respective helix type. Dataset comprises 117,665 helical segments from 7,997 non-redundant mainly-α structures (CATH S40, v4.3).
+
 As shown in Figure 4, in α-helices Leucine and Alanine together account for
 approximately 24.0% of all residues (13.2% and 10.8%, respectively), computed across
 90,263 α-helical segments. In 3-10 helices (n = 23,912 segments), the same two
@@ -323,6 +333,10 @@ is the structural element most strongly imprinted by prebiotic amino acid bias.
 ### Figure 5 - Alpha vs. 3-10 statistical comparison
 
 ![Helix type statistical comparison](imgs/helix_type_statistical_comparison.png)
+
+**Figure 5. Pairwise frequency comparison between α-helices and 3-10 helices.** Left panel: horizontal bar chart of the signed frequency difference (alpha minus 3-10) for the eight amino acids showing the largest absolute difference; blue bars indicate enrichment in α-helices, orange bars indicate enrichment in 3-10 helices. Right panel: direct scatter comparison of per-residue frequency in α-helices (x-axis) versus 3-10 helices (y-axis); the dashed diagonal represents equal frequency; symbol size is proportional to the absolute frequency difference.
+
+**Table 2. Frequency differences between α-helices and 3-10 helices for the eight most divergent amino acids.** Alpha (%) and 3-10 (%) give the observed residue frequency (percent) in each helix type; Delta is the signed difference (α minus 3-10) in percentage points. Positive Delta indicates enrichment in α-helices; negative Delta indicates enrichment in 3-10 helices. Frequencies computed from 90,263 α-helical and 23,912 3-10-helical segments.
 
 | AA | Prebiotic? | Alpha (%) | 3-10 (%) | Delta |
 |----|:----------:|----------:|---------:|------:|
@@ -354,6 +368,8 @@ dictated, not evolved.
 
 ![Helix positions](imgs/helix_positions.png)
 
+**Figure 6. Positional distribution of helical segments along the polypeptide chain.** Normalized position (0 = N-terminus, 1 = C-terminus) of each annotated helical segment, plotted as a frequency distribution for each helix type (α-helix, 3-10 helix, π-helix) across 7,997 mainly-α protein domains. Position is computed as the midpoint residue index divided by total chain length.
+
 As shown in Figure 6, α-helices are distributed across the full length of polypeptide
 chains with no strong positional bias, reflecting the structural diversity of the
 mainly-α CATH class across 7,997 domain architectures. A mild enrichment of 3-10
@@ -368,6 +384,8 @@ and provides structural context for interpreting the compositional analyses in F
 ### Figure 7 - Helix length distribution
 
 ![Helix lengths](imgs/helix_lengths.png)
+
+**Figure 7. Length distribution of α-helical segments.** Histogram of the number of residues per α-helical segment across 90,263 α-helical segments from 7,997 non-redundant mainly-α protein domains. The distribution is right-skewed; vertical dashed line marks the median length (~11 residues). Inset or comparison with 3-10 helices (median ~4 residues) is shown for reference.
 
 As shown in Figure 7, across 90,263 α-helical segments the length distribution is
 right-skewed, with a mode in the 7-12 residue range and a long tail extending beyond
@@ -385,6 +403,8 @@ toward prebiotic residues in the structural core (see also Figure 15).
 
 ![Helix length by type](imgs/helix_length_by_type.png)
 
+**Figure 8. Helix length distributions stratified by helix type.** Box-and-whisker plots (or violin plots) of residue count per helical segment for α-helices (n = 90,263), 3-10 helices (n = 23,912), and π-helices (n = 3,490) from 7,997 non-redundant mainly-α protein domains. Boxes represent the interquartile range; whiskers extend to 1.5× IQR; outliers shown as individual points.
+
 As shown in Figure 8, the length hierarchy α > π > 3-10 is confirmed across all
 117,665 helical segments. The substantially larger variance in α-helix length reflects
 the diversity of structural contexts in which α-helices appear, from compact 4-turn
@@ -398,6 +418,8 @@ and is primarily included for completeness of structural characterization.
 ### Figure 9 - Helical wheel
 
 ![Helical wheel](imgs/helical_wheel_average.png)
+
+**Figure 9. Average amino acid composition projected onto the α-helical wheel.** Helical wheel diagram (100° per residue, 3.6 residues per turn) showing the average frequency of each amino acid in each angular sector, computed across 90,263 α-helical segments from 7,997 non-redundant mainly-α protein domains. Sector area is proportional to mean residue frequency at that angular position; hydrophobic residues are shaded to highlight the buried-face arc.
 
 As shown in Figure 9, the average amino acid composition projected onto the helical
 wheel (100° per residue periodicity) reveals a partial hydrophobic sector enrichment in
@@ -414,6 +436,8 @@ than by evolved sequence specificity.
 ### Figure 10 - Hydrophobic moment distribution
 
 ![Hydrophobic moment](imgs/hydrophobic_moment_distribution.png)
+
+**Figure 10. Distribution of Eisenberg hydrophobic moments across α-helical segments.** Histogram of the normalized Eisenberg hydrophobic moment (μH) computed for each α-helical segment of four or more residues (n = 90,263 segments), using a periodicity angle of θ = 100° and Eisenberg consensus hydrophobicity values. The dashed vertical line marks the mode of the distribution. Segments are drawn from 7,997 non-redundant mainly-α protein domains.
 
 As shown in Figure 10, the distribution of Eisenberg hydrophobic moments (μH) across
 90,263 α-helical segments is broad, with a mode near 0.20-0.30 and a tail extending
@@ -432,6 +456,8 @@ interface.
 ### Figure 11 - N-cap and C-cap residue preferences
 
 ![N-cap C-cap preferences](imgs/ncap_ccap_preferences.png)
+
+**Figure 11. Amino acid enrichment at N-cap and C-cap positions of α-helices.** Left: heatmap of per-residue z-scores (row-normalized across the three N-cap positions N1, N2, N3) for the 20 standard amino acids. N1 is the first helical residue after the initiating backbone hydrogen bond; N2 and N3 are the second and third. Right: analogous heatmap for C-cap positions C3, C2, C1, where C1 is the last helical residue before the terminal backbone hydrogen bond. Red indicates enrichment relative to the per-residue mean; blue indicates depletion. Computed across 117,665 helical termini from 7,997 non-redundant mainly-α protein domains.
 
 > N1-N3: first three helical residues after the initiating hydrogen bond; C1-C3: last
 > three residues before the terminal hydrogen bond. All values are z-score normalized
@@ -462,6 +488,8 @@ peptides as a direct consequence of its side-chain hydrogen bonding capacity.
 
 ![Heptad pattern](imgs/heptad_pattern.png)
 
+**Figure 12. Hydrophobic residue fraction at each heptad position of α-helices.** Treemap showing the proportion of hydrophobic residues (Ala, Val, Ile, Leu, Met, Phe, Trp, Pro, Tyr) at each of the seven heptad positions (a-g), computed across 90,263 α-helical segments. Block area is equal for all seven positions. Colors indicate canonical structural role: red (positions a, d, hydrophobic core), dark blue (positions b, c, f, solvent-exposed), light blue (positions e, g, inter-helix electrostatic interactions). Percentage shown in each block is the hydrophobic fraction at that position.
+
 As shown in Figure 12, the fraction of hydrophobic residues at each of the seven
 heptad positions (a-g) is strikingly uniform: all seven positions carry approximately
 39% hydrophobic residues, irrespective of their canonical structural role. Positions
@@ -482,6 +510,8 @@ is shown in Figure 18.
 
 ![Helix content distribution](imgs/helix_content_distribution.png)
 
+**Figure 13. Distribution of helical content across mainly-α protein domains.** Histogram showing the fraction of residues assigned to any helical type (α, 3-10, or π) by DSSP in each of the 7,997 non-redundant mainly-α domains (CATH S40, v4.3). Dashed vertical line marks the mean helical content (54.2%). Bin width = 5%.
+
 As shown in Figure 13, the mean helical content across 7,997 structures is 54.2%, with
 a broad distribution spanning approximately 20% to 95%. This figure characterizes the
 dataset and confirms that the analysis covers a wide range of helical contexts, from
@@ -495,6 +525,8 @@ a biased sampling of any single architectural class.
 ### Figure 14 - Amino acid co-occurrence matrix
 
 ![AA co-occurrence](imgs/aa_cooccurrence.png)
+
+**Figure 14. Z-score normalized amino acid co-occurrence matrix within helical segments.** Symmetric 20x20 heatmap where each cell (i, j) represents the z-score of the co-occurrence frequency of amino acids i and j within the same helical segment, computed against the expectation under a null model of independence, across 117,665 helical segments from 7,997 non-redundant mainly-α protein domains. Red cells indicate pairs that co-occur more frequently than expected; blue cells indicate depletion.
 
 As shown in Figure 14, the z-score normalized co-occurrence matrix reveals which amino
 acid pairs appear together in the same helix more frequently than expected under
@@ -513,6 +545,10 @@ individual propensities.
 ### Figure 15 - Amino acid composition by helix length
 
 ![Helix length vs composition](imgs/helix_length_vs_composition.png)
+
+**Figure 15. Amino acid physicochemical group composition as a function of α-helix length.** Stacked bar chart showing the fraction of residues in five physicochemical groups (Hydrophobic, Polar, Positively charged, Negatively charged, Special [Gly/Pro]) in three helix-length bins: short (4-9 residues), medium (10-19 residues), and long (≥20 residues), across 90,263 α-helical segments from 7,997 non-redundant mainly-α protein domains.
+
+**Table 3. Physicochemical group composition of α-helical segments by length bin.** Residue fractions (%) in five groups across three helix-length bins: short (4-9 residues), medium (10-19 residues), and long (≥20 residues). Hydrophobic: Ala, Val, Ile, Leu, Met, Phe, Trp, Pro, Tyr; Polar: Ser, Thr, Cys, Asn, Gln; Charged+: Arg, Lys, His; Charged-: Asp, Glu; Special: Gly, Pro. Computed across 90,263 α-helical segments from 7,997 non-redundant mainly-α protein domains.
 
 | Group | Short (4-9) | Medium (10-19) | Long (>=20) |
 |-------|------------:|---------------:|------------:|
@@ -542,6 +578,8 @@ all prebiotic.
 
 ![Helix transition matrix](imgs/helix_transition_matrix.png)
 
+**Figure 16. First-order Markov transition matrix for amino acid sequences within α-helical segments.** Heatmap showing the empirical probability P(j|i) that amino acid j immediately follows amino acid i within an α-helical segment, computed across 2,368,790 helical residues from 90,263 α-helical segments. Row sums equal 1.0. Color scale from white (low probability) to dark red (high probability).
+
 As shown in Figure 16, the first-order Markov transition matrix encodes the probability
 of each amino acid being immediately followed by each other amino acid within helical
 segments, computed across the full 2,368,790-residue dataset. Dominant transitions are
@@ -557,6 +595,8 @@ for the prebiotic bias hypothesis beyond what is already shown in Figures 2-5.
 
 ![G ratio by length](imgs/g_ratio_by_length.png)
 
+**Figure 17. Frequency of 3-10 helices flanking α-helices, as a function of α-helix length.** Scatter plot or line graph showing the proportion of 3-10 helical segments that are immediately adjacent to (flanking) α-helices of a given length bin, across 7,997 non-redundant mainly-α protein domains. Each point represents one length bin; error bars indicate standard error of the proportion.
+
 As shown in Figure 17, the frequency of 3-10 helices adjacent to or flanking α-helices
 of different lengths shows that shorter α-helices have proportionally more 3-10 flanking
 segments, consistent with the model in which 3-10 helices act as N-terminal cap or
@@ -570,6 +610,8 @@ between α-helices and 3-10 helices shown in Figures 3 and 5: the residues enric
 ### Figure 18 - Shannon entropy at heptad positions
 
 ![Shannon entropy heptad](imgs/shannon_entropy_heptad.png)
+
+**Figure 18. Shannon entropy and dominant amino acid at each heptad position of α-helices.** Left panel: bar chart of Shannon entropy (bits) at each of the seven heptad positions (a-g), computed from the amino acid frequency distributions across 90,263 α-helical segments. The theoretical maximum for 20 equally probable amino acids (4.322 bits) is indicated by a dashed horizontal line; each bar is annotated with the most frequent amino acid (Leucine, L) and its observed frequency at that position. Right panel: scatter plot of entropy versus heptad position, with each point scaled to a fixed size and colored by proximity to the maximum entropy; annotations show the most frequent residue and its percentage.
 
 As shown in Figure 18, the bar chart (left panel) makes the near-flat entropy profile
 explicit: all seven heptad positions (a-g) have Shannon entropy in the range of
@@ -591,6 +633,10 @@ at all heptad positions, not merely at the hydrophobic core.
 ### Figure 19 - Codon degeneracy vs. helix propensity
 
 ![Codon degeneracy vs propensity](imgs/codon_degeneracy_vs_propensity.png)
+
+**Figure 19. Relationship between codon degeneracy and helical propensity across the standard genetic code.** Two-panel scatter plot comparing codon degeneracy (number of synonymous codons, x-axis) against (left) Chou-Fasman theoretical propensity and (right) observed helical propensity (y-axis) for all 20 standard amino acids. Each point represents one amino acid; point color distinguishes prebiotic (blue/filled) from non-prebiotic (orange/open) amino acids. The dashed horizontal line marks neutral propensity (P = 1.0).
+
+**Table 4. Codon degeneracy and observed helical propensity for selected amino acids.** Codon degeneracy is the number of synonymous codons in the standard genetic code. Observed propensity is computed from 2,368,790 helical residues across 7,997 non-redundant mainly-α protein domains. Prebiotic classification as in Table 1.
 
 | AA | Prebiotic? | Codons | Obs. propensity |
 |----|:----------:|-------:|----------------:|
@@ -621,6 +667,10 @@ hydrophobic core packing rather than prebiotic availability or codon multiplicit
 ### Figure 20 - Proteome enrichment
 
 ![Proteome comparison](imgs/proteome_comparison.png)
+
+**Figure 20. Amino acid enrichment in helical regions relative to the human reference proteome.** Upper panel: bar chart of log2-transformed enrichment ratios E(a) = f_helix(a) / f_proteome(a) for all 20 standard amino acids, ranked by enrichment; blue bars indicate enrichment (E > 1), orange bars indicate depletion (E < 1) relative to Swiss-Prot human proteome reference frequencies. Lower panel: scatter plot of log2(frequency in helices) versus log2(frequency in human proteome), with each amino acid labelled; the dashed diagonal represents equal frequency in helices and proteome.
+
+**Table 5. Proteome enrichment of selected amino acids in helical regions relative to the human reference proteome.** Enrichment E(a) = f_helix(a) / f_proteome(a), where f_proteome is the canonical Swiss-Prot human proteome frequency. log2(enrich.) is the log2-transformed enrichment ratio; positive values indicate helical enrichment, negative values indicate depletion. Bold values highlight the two most enriched residues. Computed across 90,263 α-helical segments from 7,997 non-redundant mainly-α protein domains.
 
 | AA | Prebiotic? | Enrichment | log2(enrich.) |
 |----|:----------:|----------:|---------------:|
@@ -654,6 +704,8 @@ fossil hypothesis.
 ### Figure 21 - UMAP of amino acid composition space
 
 ![UMAP composition space](imgs/umap_aa_composition.png)
+
+**Figure 21. UMAP projection of the amino acid composition space of individual helical segments.** Each of the 117,665 helical segments (α, 3-10, and π) from 7,997 non-redundant mainly-α protein domains is represented as a single point in the two-dimensional embedding, computed from a 20-dimensional vector of normalized amino acid frequencies (StandardScaler preprocessing; UMAP parameters: n_neighbors = 15, min_dist = 0.1, random_state = 42). Point color encodes the dominant (most frequent) amino acid within each helix, as indicated in the legend; only the ten most frequent dominant amino acids are labeled.
 
 As shown in Figure 21, each of the 117,665 helical segments is represented as a single
 point, embedded in two dimensions from a 20-dimensional normalized amino acid composition
